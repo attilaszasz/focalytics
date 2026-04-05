@@ -99,7 +99,7 @@ jobs:
         run: ./scripts/release/build-archive.sh "${{ steps.version.outputs.value }}" "${{ matrix.goos }}" "${{ matrix.goarch }}" "$RUNNER_TEMP/dist"
 
       - name: Upload archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ${{ runner.temp }}/dist/*
