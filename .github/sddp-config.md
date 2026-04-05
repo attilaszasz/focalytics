@@ -8,7 +8,7 @@
 
 ## Technical Context Document
 
-**Path**: 
+**Path**: specs/sad.md
 
 ## Deployment & Operations Document
 
@@ -24,7 +24,7 @@
 
 ## Autopilot
 
-**Enabled**: false
+**Enabled**: true
 
 ## Loop Settings
 
