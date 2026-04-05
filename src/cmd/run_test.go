@@ -50,6 +50,17 @@ func TestExecuteEmitsProgressToStderr(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(archiveRoot, "photo.jpg"), []byte("test"), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
+	workDir := t.TempDir()
+	originalWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatalf("chdir workdir: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(originalWorkingDirectory)
+	}()
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}

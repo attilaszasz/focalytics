@@ -44,16 +44,23 @@ type GearSummary struct {
 }
 
 type TechnicalSummary struct {
-	FocalLengths  []RankedBucket
-	Apertures     []RankedBucket
-	ShutterSpeeds []RankedBucket
-	ISOs          []RankedBucket
+	FocalLengths      []RankedBucket
+	FocalLengthLenses []BucketLensSummary
+	Apertures         []RankedBucket
+	ApertureLenses    []BucketLensSummary
+	ShutterSpeeds     []RankedBucket
+	ISOs              []RankedBucket
 }
 
 type RankedBucket struct {
 	Key   string
 	Label string
 	Count int
+}
+
+type BucketLensSummary struct {
+	BucketKey string
+	Lenses    []RankedBucket
 }
 
 type ExclusionSummary struct {

@@ -40,10 +40,13 @@ func TestGenerateWritesReportAndPrintsPath(t *testing.T) {
 		t.Fatalf("read report: %v", err)
 	}
 	html := string(content)
-	for _, fragment := range []string{"<h2>Timeline</h2>", "Camera bodies", "focalytics archive report", "Note: 3 missing-data exclusions affected this section."} {
+	for _, fragment := range []string{"<h2>Timeline</h2>", "Camera bodies", "focalytics report", "Note: 3 missing-data exclusions affected this section."} {
 		if !strings.Contains(html, fragment) {
 			t.Fatalf("expected report to contain %q", fragment)
 		}
+	}
+	if !strings.Contains(html, "data-hint=\"Lenses:\nLens B (2)\"") {
+		t.Fatalf("expected report to contain focal/aperture lens tooltip, got %q", html)
 	}
 	if !strings.Contains(html, "<svg class=\"heatmap\"") {
 		t.Fatalf("expected inline SVG heatmap, got %q", html)
@@ -128,10 +131,12 @@ func renderFixtureSummary() aggregate.Result {
 			Lenses:  []aggregate.RankedBucket{{Key: "Lens Prime", Label: "Lens Prime", Count: 2}, {Key: "Lens Zoom", Label: "Lens Zoom", Count: 1}},
 		},
 		Technical: aggregate.TechnicalSummary{
-			FocalLengths:  []aggregate.RankedBucket{{Key: "000500", Label: "50mm", Count: 2}, {Key: "000850", Label: "85mm", Count: 1}},
-			Apertures:     []aggregate.RankedBucket{{Key: "000028", Label: "f/2.8", Count: 2}, {Key: "000040", Label: "f/4", Count: 1}},
-			ShutterSpeeds: []aggregate.RankedBucket{{Key: "000000008000", Label: "1/125s", Count: 2}, {Key: "000000016667", Label: "1/60s", Count: 1}},
-			ISOs:          []aggregate.RankedBucket{{Key: "000100", Label: "ISO 100", Count: 1}, {Key: "000200", Label: "ISO 200", Count: 2}},
+			FocalLengths:      []aggregate.RankedBucket{{Key: "000500", Label: "50mm", Count: 2}, {Key: "000850", Label: "85mm", Count: 1}},
+			FocalLengthLenses: []aggregate.BucketLensSummary{{BucketKey: "000500", Lenses: []aggregate.RankedBucket{{Key: "Lens B", Label: "Lens B", Count: 2}}}, {BucketKey: "000850", Lenses: []aggregate.RankedBucket{{Key: "Lens A", Label: "Lens A", Count: 1}}}},
+			Apertures:         []aggregate.RankedBucket{{Key: "000028", Label: "f/2.8", Count: 2}, {Key: "000040", Label: "f/4", Count: 1}},
+			ApertureLenses:    []aggregate.BucketLensSummary{{BucketKey: "000028", Lenses: []aggregate.RankedBucket{{Key: "Lens B", Label: "Lens B", Count: 2}}}, {BucketKey: "000040", Lenses: []aggregate.RankedBucket{{Key: "Lens A", Label: "Lens A", Count: 1}}}},
+			ShutterSpeeds:     []aggregate.RankedBucket{{Key: "000000008000", Label: "1/125s", Count: 2}, {Key: "000000016667", Label: "1/60s", Count: 1}},
+			ISOs:              []aggregate.RankedBucket{{Key: "000100", Label: "ISO 100", Count: 1}, {Key: "000200", Label: "ISO 200", Count: 2}},
 		},
 		Exclusions: []aggregate.ExclusionSummary{{Metric: metadata.MetricCapturedAt, Reason: "capture time unavailable after embedded, sidecar, and fallback recovery", Count: 3}, {Metric: metadata.MetricCameraModel, Reason: "camera model unavailable", Count: 1}},
 	}

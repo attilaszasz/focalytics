@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/attila/focalytics/internal/aggregate"
@@ -29,7 +30,7 @@ func NewService() Service {
 }
 
 func (s Service) Generate(summary aggregate.Result, archiveRoot string, stdout io.Writer) (Result, error) {
-	generatedAt := s.now().UTC()
+	generatedAt := s.now()
 	path, err := s.reportPath(generatedAt)
 	if err != nil {
 		return Result{}, err
@@ -79,13 +80,12 @@ func buildModel(summary aggregate.Result, archiveRoot string, generatedAt time.T
 	}
 
 	return Model{
-		ReportTitle: "focalytics archive report",
+		ReportTitle: "focalytics report",
 		ArchiveName: archiveName,
-		GeneratedAt: generatedAt.Format("2006-01-02 15:04 UTC"),
+		GeneratedAt: generatedAt.Format("2006-01-02 15:04"),
 		Overview: OverviewSection{
 			TotalPhotos: summary.Totals.Facts,
 			DateSpan:    formatDateSpan(summary.DateSpan),
-			WarningText: formatWarnings(summary.WarningsTotal),
 			TopCamera:   topLabel(summary.Gear.Cameras),
 			TopLens:     topLabel(summary.Gear.Lenses),
 			TopFocal:    topLabel(summary.Technical.FocalLengths),
@@ -99,8 +99,8 @@ func buildModel(summary aggregate.Result, archiveRoot string, generatedAt time.T
 		},
 		Cameras:  metricSection("Camera bodies", "Most-used cameras in the archive", rankedRows(summary.Gear.Cameras), sectionNote(summary.Exclusions, metadata.MetricCameraModel)),
 		Lenses:   metricSection("Lenses", "Most-used lenses in the archive", rankedRows(summary.Gear.Lenses), sectionNote(summary.Exclusions, metadata.MetricLensModel)),
-		Focal:    metricSection("Focal length", "Normalized focal length usage", rankedRows(summary.Technical.FocalLengths), sectionNote(summary.Exclusions, metadata.MetricNormalizedFocalLength)),
-		Aperture: metricSection("Aperture", "How often apertures were used", rankedRows(summary.Technical.Apertures), sectionNote(summary.Exclusions, metadata.MetricApertureF)),
+		Focal:    metricSection("Focal length", "Normalized focal length usage", rankedRowsWithLensHints(summary.Technical.FocalLengths, summary.Technical.FocalLengthLenses), sectionNote(summary.Exclusions, metadata.MetricNormalizedFocalLength)),
+		Aperture: metricSection("Aperture", "How often apertures were used", rankedRowsWithLensHints(summary.Technical.Apertures, summary.Technical.ApertureLenses), sectionNote(summary.Exclusions, metadata.MetricApertureF)),
 		Shutter:  metricSection("Shutter speed", "Exposure duration distribution", rankedRows(summary.Technical.ShutterSpeeds), sectionNote(summary.Exclusions, metadata.MetricShutterSeconds)),
 		ISO:      metricSection("ISO", "Sensitivity distribution", rankedRows(summary.Technical.ISOs), sectionNote(summary.Exclusions, metadata.MetricISO)),
 	}
@@ -117,19 +117,9 @@ func formatDateSpan(span aggregate.DateSpan) string {
 	first := span.FirstCapturedAt.Format("2006-01-02")
 	last := span.LastCapturedAt.Format("2006-01-02")
 	if first == last {
-		return fmt.Sprintf("Photos taken on %s.", first)
+		return first
 	}
-	return fmt.Sprintf("Photos taken between %s and %s.", first, last)
-}
-
-func formatWarnings(count int) string {
-	if count == 0 {
-		return "No metadata warnings were recorded."
-	}
-	if count == 1 {
-		return "1 metadata warning was recorded during analysis."
-	}
-	return fmt.Sprintf("%d metadata warnings were recorded during analysis.", count)
+	return fmt.Sprintf("%s to %s", first, last)
 }
 
 func topLabel(rows []aggregate.RankedBucket) string {
@@ -160,17 +150,37 @@ func barRows(rows []aggregate.TimelineBucket) []BarRow {
 }
 
 func rankedRows(rows []aggregate.RankedBucket) []BarRow {
+	return rankedRowsWithLensHints(rows, nil)
+}
+
+func rankedRowsWithLensHints(rows []aggregate.RankedBucket, associations []aggregate.BucketLensSummary) []BarRow {
 	converted := make([]BarRow, 0, len(rows))
 	maxCount := 0
+	hints := map[string]string{}
+	for _, association := range associations {
+		hints[association.BucketKey] = formatLensHint(association.Lenses)
+	}
 	for _, row := range rows {
 		if row.Count > maxCount {
 			maxCount = row.Count
 		}
 	}
 	for _, row := range rows {
-		converted = append(converted, BarRow{Label: row.Label, DisplayValue: fmt.Sprintf("%d", row.Count), Count: row.Count, WidthPercent: widthPercent(row.Count, maxCount)})
+		converted = append(converted, BarRow{Label: row.Label, DisplayValue: fmt.Sprintf("%d", row.Count), Count: row.Count, WidthPercent: widthPercent(row.Count, maxCount), Hint: hints[row.Key]})
 	}
 	return converted
+}
+
+func formatLensHint(lenses []aggregate.RankedBucket) string {
+	if len(lenses) == 0 {
+		return ""
+	}
+	lines := make([]string, 0, len(lenses)+1)
+	lines = append(lines, "Lenses:")
+	for _, lens := range lenses {
+		lines = append(lines, fmt.Sprintf("%s (%d)", lens.Label, lens.Count))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func widthPercent(count, maxCount int) float64 {

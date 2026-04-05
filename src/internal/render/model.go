@@ -24,7 +24,6 @@ type Model struct {
 type OverviewSection struct {
 	TotalPhotos int
 	DateSpan    string
-	WarningText string
 	TopCamera   string
 	TopLens     string
 	TopFocal    string
@@ -50,6 +49,7 @@ type BarRow struct {
 	DisplayValue string
 	Count        int
 	WidthPercent float64
+	Hint         string
 }
 
 type HeatmapCell struct {

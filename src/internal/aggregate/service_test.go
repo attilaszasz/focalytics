@@ -77,8 +77,20 @@ func TestAggregateGearAndTechnicalSummaries(t *testing.T) {
 	if len(result.Technical.FocalLengths) != 2 || result.Technical.FocalLengths[0].Label != "50mm" {
 		t.Fatalf("unexpected focal length buckets: %+v", result.Technical.FocalLengths)
 	}
+	if len(result.Technical.FocalLengthLenses) != 2 || result.Technical.FocalLengthLenses[0].BucketKey != "000500" {
+		t.Fatalf("unexpected focal length lens summaries: %+v", result.Technical.FocalLengthLenses)
+	}
+	if len(result.Technical.FocalLengthLenses[0].Lenses) != 1 || result.Technical.FocalLengthLenses[0].Lenses[0].Label != "Lens B" || result.Technical.FocalLengthLenses[0].Lenses[0].Count != 2 {
+		t.Fatalf("unexpected focal length lens breakdown: %+v", result.Technical.FocalLengthLenses[0].Lenses)
+	}
 	if len(result.Technical.Apertures) != 2 || result.Technical.Apertures[0].Label != "f/2.8" {
 		t.Fatalf("unexpected aperture buckets: %+v", result.Technical.Apertures)
+	}
+	if len(result.Technical.ApertureLenses) != 2 || result.Technical.ApertureLenses[0].BucketKey != "000028" {
+		t.Fatalf("unexpected aperture lens summaries: %+v", result.Technical.ApertureLenses)
+	}
+	if len(result.Technical.ApertureLenses[0].Lenses) != 1 || result.Technical.ApertureLenses[0].Lenses[0].Label != "Lens B" || result.Technical.ApertureLenses[0].Lenses[0].Count != 2 {
+		t.Fatalf("unexpected aperture lens breakdown: %+v", result.Technical.ApertureLenses[0].Lenses)
 	}
 	if len(result.Technical.ShutterSpeeds) != 2 || result.Technical.ShutterSpeeds[0].Label != "1/125s" {
 		t.Fatalf("unexpected shutter buckets: %+v", result.Technical.ShutterSpeeds)

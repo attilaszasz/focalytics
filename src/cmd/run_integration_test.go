@@ -70,7 +70,7 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read report file: %v", err)
 	}
-	if !strings.Contains(string(reportContent), "focalytics archive report") {
+	if !strings.Contains(string(reportContent), "focalytics report") {
 		t.Fatalf("expected generated report content, got %q", string(reportContent))
 	}
 	stderrOutput := stderr.String()

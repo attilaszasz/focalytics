@@ -21,7 +21,9 @@ func (s Service) Aggregate(metadataResult metadata.Result) Result {
 	cameraCounts := map[string]int{}
 	lensCounts := map[string]int{}
 	focalBuckets := map[string]RankedBucket{}
+	focalLensCounts := map[string]map[string]int{}
 	apertureBuckets := map[string]RankedBucket{}
+	apertureLensCounts := map[string]map[string]int{}
 	shutterBuckets := map[string]RankedBucket{}
 	isoBuckets := map[string]RankedBucket{}
 	exclusionBuckets := map[string]ExclusionSummary{}
@@ -38,19 +40,24 @@ func (s Service) Aggregate(metadataResult metadata.Result) Result {
 			dayCounts[dayBucketKey(*fact.CapturedAt)]++
 		}
 
-		if label := strings.TrimSpace(fact.CameraModel); label != "" {
-			cameraCounts[label]++
+		cameraLabel := strings.TrimSpace(fact.CameraModel)
+		lensLabel := strings.TrimSpace(fact.LensModel)
+
+		if cameraLabel != "" {
+			cameraCounts[cameraLabel]++
 		}
-		if label := strings.TrimSpace(fact.LensModel); label != "" {
-			lensCounts[label]++
+		if lensLabel != "" {
+			lensCounts[lensLabel]++
 		}
 		if fact.NormalizedFocalLengthMM != nil {
 			key, label := focalLengthBucket(*fact.NormalizedFocalLengthMM)
 			incrementBucket(focalBuckets, key, label)
+			incrementNestedCount(focalLensCounts, key, lensLabel)
 		}
 		if fact.ApertureF != nil {
 			key, label := apertureBucket(*fact.ApertureF)
 			incrementBucket(apertureBuckets, key, label)
+			incrementNestedCount(apertureLensCounts, key, lensLabel)
 		}
 		if fact.ShutterSeconds != nil {
 			key, label := shutterSpeedBucket(*fact.ShutterSeconds)
@@ -77,7 +84,9 @@ func (s Service) Aggregate(metadataResult metadata.Result) Result {
 	result.Gear.Cameras = rankedCounts(cameraCounts)
 	result.Gear.Lenses = rankedCounts(lensCounts)
 	result.Technical.FocalLengths = rankedBucketValues(focalBuckets)
+	result.Technical.FocalLengthLenses = bucketLensSummaries(focalLensCounts)
 	result.Technical.Apertures = rankedBucketValues(apertureBuckets)
+	result.Technical.ApertureLenses = bucketLensSummaries(apertureLensCounts)
 	result.Technical.ShutterSpeeds = rankedBucketValues(shutterBuckets)
 	result.Technical.ISOs = rankedBucketValues(isoBuckets)
 	result.Exclusions = exclusionValues(exclusionBuckets)
@@ -103,6 +112,19 @@ func incrementBucket(buckets map[string]RankedBucket, key, label string) {
 	bucket.Label = label
 	bucket.Count++
 	buckets[key] = bucket
+}
+
+func incrementNestedCount(buckets map[string]map[string]int, bucketKey, label string) {
+	if bucketKey == "" {
+		return
+	}
+	if label == "" {
+		label = "Unknown lens"
+	}
+	if _, ok := buckets[bucketKey]; !ok {
+		buckets[bucketKey] = map[string]int{}
+	}
+	buckets[bucketKey][label]++
 }
 
 func timelineBuckets(counts map[string]int) []TimelineBucket {
@@ -144,6 +166,19 @@ func rankedBucketValues(values map[string]RankedBucket) []RankedBucket {
 		return buckets[left].Key < buckets[right].Key
 	})
 	return buckets
+}
+
+func bucketLensSummaries(values map[string]map[string]int) []BucketLensSummary {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	summaries := make([]BucketLensSummary, 0, len(keys))
+	for _, key := range keys {
+		summaries = append(summaries, BucketLensSummary{BucketKey: key, Lenses: rankedCounts(values[key])})
+	}
+	return summaries
 }
 
 func exclusionValues(values map[string]ExclusionSummary) []ExclusionSummary {

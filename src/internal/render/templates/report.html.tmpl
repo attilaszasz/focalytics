@@ -9,9 +9,6 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">focalytics offline report</div>
-      <h1 class="title">{{.Report.ArchiveName}}</h1>
-      <p class="subtitle">A self-contained archive dashboard built from local aggregate analysis. No external scripts, no network requests, and no per-photo frontend payloads.</p>
       <div class="meta">Generated {{.Report.GeneratedAt}}</div>
       <div class="cards">
         <article class="card">
@@ -34,17 +31,12 @@
           <div class="card-label">Top focal length</div>
           <div class="card-value">{{.Report.Overview.TopFocal}}</div>
         </article>
-        <article class="card">
-          <div class="card-label">Warning summary</div>
-          <div class="card-value">{{.Report.Overview.WarningText}}</div>
-        </article>
       </div>
     </section>
 
     <section class="section-grid">
       <article class="panel">
         <h2>Timeline</h2>
-        <p class="section-copy">Year-level volume and daily activity derived from normalized capture dates.</p>
         {{if .Report.Timeline.YearBars}}
         <div class="bar-list">
           {{range .Report.Timeline.YearBars}}
@@ -61,13 +53,12 @@
         <div class="heatmap-wrap">
           <svg class="heatmap" viewBox="0 0 {{.Report.Timeline.HeatmapWidth}} {{.Report.Timeline.HeatmapHeight}}" role="img" aria-label="Archive activity heatmap">
             {{range .Report.Timeline.HeatmapCells}}
-            <rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="3" fill="{{.Fill}}">
+            <rect x="{{.X}}" y="{{.Y}}" width="{{.Width}}" height="{{.Height}}" rx="0" fill="{{.Fill}}">
               <title>{{.Label}}</title>
             </rect>
             {{end}}
           </svg>
         </div>
-        <div class="chart-caption">Each tile represents one day in the archive span, grouped by week.</div>
         {{end}}
         {{if .Report.Timeline.Note}}
         <details class="note">
@@ -82,37 +73,31 @@
       <div class="metrics-grid">
         <article class="panel">
           <h3>{{.Report.Cameras.Title}}</h3>
-          <p class="section-copy">{{.Report.Cameras.Subtitle}}</p>
           {{template "metric-section" .Report.Cameras}}
         </article>
         <article class="panel">
           <h3>{{.Report.Lenses.Title}}</h3>
-          <p class="section-copy">{{.Report.Lenses.Subtitle}}</p>
           {{template "metric-section" .Report.Lenses}}
         </article>
         <article class="panel">
+          <h3>{{.Report.ISO.Title}}</h3>
+          {{template "metric-section" .Report.ISO}}
+        </article>
+        <article class="panel">
           <h3>{{.Report.Focal.Title}}</h3>
-          <p class="section-copy">{{.Report.Focal.Subtitle}}</p>
           {{template "metric-section" .Report.Focal}}
         </article>
         <article class="panel">
           <h3>{{.Report.Aperture.Title}}</h3>
-          <p class="section-copy">{{.Report.Aperture.Subtitle}}</p>
           {{template "metric-section" .Report.Aperture}}
         </article>
         <article class="panel">
           <h3>{{.Report.Shutter.Title}}</h3>
-          <p class="section-copy">{{.Report.Shutter.Subtitle}}</p>
           {{template "metric-section" .Report.Shutter}}
-        </article>
-        <article class="panel">
-          <h3>{{.Report.ISO.Title}}</h3>
-          <p class="section-copy">{{.Report.ISO.Subtitle}}</p>
-          {{template "metric-section" .Report.ISO}}
         </article>
       </div>
     </section>
-    <div class="footer">Generated locally by focalytics.</div>
+    <div class="footer">focalytics</div>
   </main>
 </body>
 </html>
@@ -121,7 +106,7 @@
   {{if .Rows}}
   <div class="bar-list">
     {{range .Rows}}
-    <div class="bar-row">
+    <div class="bar-row{{if .Hint}} has-hint{{end}}"{{if .Hint}} data-hint="{{.Hint}}"{{end}}>
       <div class="bar-header"><span>{{.Label}}</span><span class="bar-value">{{.DisplayValue}}</span></div>
       <div class="bar-track"><div class="bar-fill" style="width: {{printf "%.2f" .WidthPercent}}%"></div></div>
     </div>
