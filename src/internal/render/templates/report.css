@@ -83,6 +83,17 @@ body {
   color: var(--accent-text);
 }
 
+.card-value-list {
+	display: grid;
+	gap: 4px;
+	font-size: 17px;
+	line-height: 1.25;
+}
+
+.card-value-item {
+	min-height: 1lh;
+}
+
 .section-grid {
   margin-top: 16px;
 }

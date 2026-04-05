@@ -24,9 +24,9 @@ type Model struct {
 type OverviewSection struct {
 	TotalPhotos int
 	DateSpan    string
-	TopCamera   string
-	TopLens     string
-	TopFocal    string
+	TopCamera   []string
+	TopLens     []string
+	TopFocal    []string
 }
 
 type TimelineSection struct {

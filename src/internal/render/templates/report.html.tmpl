@@ -16,20 +16,32 @@
           <div class="card-value">{{.Report.Overview.TotalPhotos}}</div>
         </article>
         <article class="card">
-          <div class="card-label">Archive span</div>
-          <div class="card-value">{{.Report.Overview.DateSpan}}</div>
-        </article>
-        <article class="card">
           <div class="card-label">Top camera</div>
-          <div class="card-value">{{.Report.Overview.TopCamera}}</div>
+          <div class="card-value card-value-list">
+            {{range .Report.Overview.TopCamera}}
+            <div class="card-value-item">{{.}}</div>
+            {{end}}
+          </div>
         </article>
         <article class="card">
           <div class="card-label">Top lens</div>
-          <div class="card-value">{{.Report.Overview.TopLens}}</div>
+          <div class="card-value card-value-list">
+            {{range .Report.Overview.TopLens}}
+            <div class="card-value-item">{{.}}</div>
+            {{end}}
+          </div>
         </article>
         <article class="card">
           <div class="card-label">Top focal length</div>
-          <div class="card-value">{{.Report.Overview.TopFocal}}</div>
+          <div class="card-value card-value-list">
+            {{range .Report.Overview.TopFocal}}
+            <div class="card-value-item">{{.}}</div>
+            {{end}}
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-label">Archive span</div>
+          <div class="card-value">{{.Report.Overview.DateSpan}}</div>
         </article>
       </div>
     </section>

@@ -86,9 +86,9 @@ func buildModel(summary aggregate.Result, archiveRoot string, generatedAt time.T
 		Overview: OverviewSection{
 			TotalPhotos: summary.Totals.Facts,
 			DateSpan:    formatDateSpan(summary.DateSpan),
-			TopCamera:   topLabel(summary.Gear.Cameras),
-			TopLens:     topLabel(summary.Gear.Lenses),
-			TopFocal:    topLabel(summary.Technical.FocalLengths),
+			TopCamera:   topLabels(summary.Gear.Cameras, 3),
+			TopLens:     topLabels(summary.Gear.Lenses, 3),
+			TopFocal:    topLabels(summary.Technical.FocalLengths, 3),
 		},
 		Timeline: TimelineSection{
 			YearBars:      barRows(summary.Timeline.Years),
@@ -122,17 +122,31 @@ func formatDateSpan(span aggregate.DateSpan) string {
 	return fmt.Sprintf("%s to %s", first, last)
 }
 
-func topLabel(rows []aggregate.RankedBucket) string {
+func topLabels(rows []aggregate.RankedBucket, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
 	if len(rows) == 0 {
-		return "Unavailable"
+		return []string{"Unavailable"}
 	}
-	top := rows[0]
-	for _, row := range rows[1:] {
-		if row.Count > top.Count {
-			top = row
+	ranked := append([]aggregate.RankedBucket(nil), rows...)
+	sort.Slice(ranked, func(left, right int) bool {
+		if ranked[left].Count != ranked[right].Count {
+			return ranked[left].Count > ranked[right].Count
 		}
+		if ranked[left].Label != ranked[right].Label {
+			return ranked[left].Label < ranked[right].Label
+		}
+		return ranked[left].Key < ranked[right].Key
+	})
+	if len(ranked) < limit {
+		limit = len(ranked)
 	}
-	return top.Label
+	labels := make([]string, 0, limit)
+	for _, row := range ranked[:limit] {
+		labels = append(labels, row.Label)
+	}
+	return labels
 }
 
 func barRows(rows []aggregate.TimelineBucket) []BarRow {

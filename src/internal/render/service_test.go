@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -41,6 +42,11 @@ func TestGenerateWritesReportAndPrintsPath(t *testing.T) {
 	}
 	html := string(content)
 	for _, fragment := range []string{"<h2>Timeline</h2>", "Camera bodies", "focalytics report", "Note: 3 missing-data exclusions affected this section."} {
+		if !strings.Contains(html, fragment) {
+			t.Fatalf("expected report to contain %q", fragment)
+		}
+	}
+	for _, fragment := range []string{"<div class=\"card-value-item\">Camera A</div>", "<div class=\"card-value-item\">Camera B</div>", "<div class=\"card-value-item\">Lens Prime</div>", "<div class=\"card-value-item\">Lens Zoom</div>", "<div class=\"card-value-item\">50mm</div>", "<div class=\"card-value-item\">85mm</div>"} {
 		if !strings.Contains(html, fragment) {
 			t.Fatalf("expected report to contain %q", fragment)
 		}
@@ -106,12 +112,26 @@ func TestBuildModelSelectsTopFocalByHighestCount(t *testing.T) {
 		{Key: "000176", Label: "17.6mm", Count: 4},
 		{Key: "000850", Label: "85mm", Count: 127},
 		{Key: "000500", Label: "50mm", Count: 110},
+		{Key: "000240", Label: "24mm", Count: 95},
 	}
 
 	model := buildModel(summary, "/archives/gallery", time.Date(2026, time.April, 5, 11, 31, 0, 0, time.UTC))
 
-	if model.Overview.TopFocal != "85mm" {
-		t.Fatalf("unexpected top focal label: got %q want %q", model.Overview.TopFocal, "85mm")
+	want := []string{"85mm", "50mm", "24mm"}
+	if !reflect.DeepEqual(model.Overview.TopFocal, want) {
+		t.Fatalf("unexpected top focal labels: got %v want %v", model.Overview.TopFocal, want)
+	}
+}
+
+func TestBuildModelLimitsTopHeroListsToAvailableLabels(t *testing.T) {
+	summary := renderFixtureSummary()
+	summary.Gear.Cameras = []aggregate.RankedBucket{{Key: "Camera A", Label: "Camera A", Count: 2}, {Key: "Camera B", Label: "Camera B", Count: 1}}
+
+	model := buildModel(summary, "/archives/gallery", time.Date(2026, time.April, 5, 11, 31, 0, 0, time.UTC))
+
+	want := []string{"Camera A", "Camera B"}
+	if !reflect.DeepEqual(model.Overview.TopCamera, want) {
+		t.Fatalf("unexpected top camera labels: got %v want %v", model.Overview.TopCamera, want)
 	}
 }
 
