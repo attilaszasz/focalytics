@@ -7,7 +7,7 @@ dod_source: ""
 
 # Project Implementation Plan
 
-> Product: focalytics | Created: 2026-04-05 | Status: Draft | Total Epics: 6 (P1: 5, P2: 1, P3: 0) | Waves: 5
+> Product: focalytics | Created: 2026-04-05 | Status: Draft | Total Epics: 7 (P1: 6, P2: 1, P3: 0) | Waves: 6
 
 ## Epic Checklist
 
@@ -42,6 +42,12 @@ dod_source: ""
 
 - [X] E005 [P1] [PRODUCT] {PRD:CAP-003,CAP-004,CAP-005,CAP-006}{SAD:ADR-004} Render Offline Report — generate the self-contained HTML dashboard with summary sections, charts, and exclusion footnotes.
 
+### Wave 6 — Progress Experience
+
+> Replace the per-file text output with an interactive terminal UI so large-archive scans show clear stage progress instead of flooding the screen.
+
+- [ ] E007 [P1] [PRODUCT] {PRD:CAP-001}{SAD:ADR-001} Interactive Progress Display — replace per-file text flood with Bubble Tea TUI showing stage spinners, live counters, and non-interactive fallback.
+
 ## Dependency Diagram
 
 ```mermaid
@@ -52,8 +58,10 @@ graph LR
     M2 -->|E003<br>Recover Metadata Facts| M3([Metadata Ready])
     M3 -->|E004<br>Aggregate Insight Metrics| M4([Insight Model Ready])
     M4 -->|E005<br>Render Offline Report| M5([MVP Ready])
+    M5 -->|E007<br>Interactive Progress Display| M8([Progress UX Ready])
     M5 --> M7([Project Increment Ready])
     M6 --> M7
+    M8 --> M7
 ```
 
 ## Execution Wave Summary
@@ -65,6 +73,7 @@ graph LR
 | 3 | E003 | No | Metadata layering depends on discovery output and file candidate rules from E002. |
 | 4 | E004 | No | Aggregate structures depend on normalized facts and exclusion signals from E003. |
 | 5 | E005 | No | Report rendering depends on stable aggregate models and exclusion counters from E004. |
+| 6 | E007 | No | Progress UX replaces text-based reporting across all pipeline stages after the full pipeline is stable. |
 
 ## Parallel Execution Guidance
 
@@ -77,12 +86,14 @@ graph LR
 - E002 and E006 both rely on the binary name, target matrix, and default command contract defined in E001; changing those interfaces mid-wave will force rework in release automation.
 - E003 and E004 share ownership of fact and aggregate schemas; if exclusion semantics drift, the report layer will misstate data quality.
 - E004 and E005 share the report model boundary; chart bucket names and exclusion counters must stabilize before HTML templates are finalized.
+- E007 replaces the progress sink wiring in the CLI entry point and removes stdout writes from discovery and render; existing integration tests that assert on per-file stdout output will need updating.
 
 ### Shared Resource Conflicts
 
 - The CLI command surface introduced in E001 is a shared contract for all later epics and should be versioned conservatively.
 - Release metadata in E006 must not invent artifact names or checksum layouts that diverge from the actual build outputs produced by the core runtime.
 - Aggregate model changes in E004 should land behind explicit shared types to avoid hidden coupling with E005 templates.
+- E007 introduces Bubble Tea as a new runtime dependency; the progress Sink interface must remain stable so non-interactive runs continue to work without the TUI.
 
 ## Epic Details
 
@@ -207,6 +218,30 @@ graph LR
   - **Depends on artifacts**: E004 aggregate model
   - **Constraints**: Self-contained output, offline viewing, no per-photo frontend payloads
 
+### E007 — Interactive Progress Display
+
+- **Category**: PRODUCT
+- **Priority**: P1
+- **Source**: {PRD:CAP-001}{SAD:ADR-001}
+- **Scope**: Replace the per-file TextSink stderr flooding and per-file stdout candidate listing with a Bubble Tea interactive TUI. The TUI shows per-stage spinners or checkmarks, live discovery counters (files, candidates, directories, throughput), metadata recovery progress (processed/total), and the report path on completion. TTY detection gates the TUI — piped or CI runs receive silent output with only the report path on stdout. Per-file stdout writes are removed entirely.
+- **Actors**: Photographer
+- **Key entities**: Progress event, TUI model, stage lifecycle, TTY detection
+- **Depends on**: E005
+- **Dependency contracts**: Requires the full pipeline (discovery, metadata, aggregate, render stages) from E001–E005 to be stable so stage lifecycle events can be published and the TUI can track all stages.
+- **Depended on by**: None
+- **Produces (shared)**: TUI sink, extended progress event model (stage start/end, processed/total counts), TTY detection utility
+- **Constraints**: Must not break non-interactive (piped) execution. The Sink interface must remain stable. Report path must remain the sole stdout output for scriptability.
+- **Acceptance criteria**:
+  - [ ] Interactive terminals show per-stage progress with spinners and live counters instead of per-file log messages.
+  - [ ] Non-interactive (piped) runs produce no TUI escape codes; only the report file path appears on stdout.
+  - [ ] The report file path remains the sole stdout output, preserving scriptability (`path=$(focalytics ~/Photos)`).
+- **Specify input**:
+  - **Description**: Replace text-based progress flooding with an interactive Bubble Tea terminal UI for stage-level progress.
+  - **Actors**: Photographer
+  - **Key entities**: Progress event, TUI model, stage lifecycle, TTY detection
+  - **Depends on artifacts**: E005 full pipeline, existing progress.Sink interface
+  - **Constraints**: Stable Sink interface, TTY/non-TTY dual-mode, no stdout noise
+
 ### E006 — Publish Installable Releases
 
 - **Category**: TECHNICAL
@@ -238,7 +273,7 @@ graph LR
 
 | PRD Capability | Epics | Status | Notes |
 |----------------|-------|--------|-------|
-| CAP-001 | E002 | Covered | Archive discovery and traversal are isolated as the first product increment. |
+| CAP-001 | E002, E007 | Covered | Archive discovery and traversal in E002; responsive progress UX in E007. |
 | CAP-002 | E003 | Covered | Metadata recovery, sidecars, and fallbacks are delivered together. |
 | CAP-003 | E005 | Covered | Self-contained report generation is the final MVP increment. |
 | CAP-004 | E004, E005 | Covered | Timeline and activity insights are aggregated first, then rendered. |
@@ -250,7 +285,7 @@ graph LR
 
 | SAD Decision | Epics | Status | Notes |
 |--------------|-------|--------|-------|
-| ADR-001 | E001, E002 | Covered | The modular monolith is established and exercised by discovery. |
+| ADR-001 | E001, E002, E007 | Covered | The modular monolith is established in E001, exercised by discovery in E002, and the Progress UI module is delivered in E007. |
 | ADR-002 | E001, E002, E004 | Covered | Stateless-per-run execution is reflected in core runtime and aggregation design. |
 | ADR-003 | E003, E004, E005 | Covered | Layered recovery and explicit exclusions are implemented end to end. |
 | ADR-004 | E005 | Covered | Self-contained static report generation is a dedicated epic. |
@@ -277,24 +312,27 @@ graph LR
 | Metadata fact | E003 | E004 |
 | Exclusion summary | E003 | E004, E005 |
 | Archive summary | E004 | E005 |
+| Progress event | E001 | E002, E003, E007 |
 
 ### API Surfaces
 
 | API Surface | Introduced by | Consumed by |
 |-------------|---------------|-------------|
-| CLI command contract | E001 | E002, E003, E004, E005, E006 |
+| CLI command contract | E001 | E002, E003, E004, E005, E006, E007 |
 | Exit-code contract | E001 | E002, E003, E005, E006 |
 | Report output contract | E005 | E006 |
+| Progress sink contract | E001 | E002, E003, E007 |
 
 ### Libraries/Modules
 
 | Library/Module | Introduced by | Consumed by |
 |----------------|---------------|-------------|
-| Command runtime package | E001 | E002, E003, E004, E005, E006 |
+| Command runtime package | E001 | E002, E003, E004, E005, E006, E007 |
 | Discovery package | E002 | E003 |
 | Metadata recovery package | E003 | E004 |
 | Aggregation package | E004 | E005 |
 | Release automation config | E006 | E006 |
+| TUI progress sink | E007 | E007 |
 
 ## Wave Transition Protocol
 
