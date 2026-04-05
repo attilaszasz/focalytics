@@ -45,7 +45,7 @@ func (s Service) Generate(summary aggregate.Result, archiveRoot string, stdout i
 		return Result{}, fmt.Errorf("write report %q: %w", path, err)
 	}
 	if stdout != nil {
-		_, _ = fmt.Fprintf(stdout, "report\t%s\n", path)
+		_, _ = fmt.Fprintf(stdout, "%s\n", path)
 	}
 	return Result{Path: path, GeneratedAt: generatedAt}, nil
 }

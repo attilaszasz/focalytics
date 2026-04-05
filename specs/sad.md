@@ -289,4 +289,5 @@ There is no hosted production environment and no support desk. Operational respo
 - Distribution infrastructure centers on immutable GitHub Release artifacts and downstream package-manager metadata derived from those assets.
 - Feature-level command wiring should use constructor-based Cobra commands backed by internal runtime packages rather than package-global registration side effects.
 - Progress reporting should remain a UI-agnostic event stream with a no-op-capable sink so CLI runs stay valid in both TTY and non-interactive environments.
+- CLI stdout should remain reserved for durable success outputs, while progress UX and warnings stay on stderr or the terminal UI channel.
 - The baseline Go QC stack is `gofmt`, `golangci-lint`, `govulncheck`, and native `go test` coverage tooling with cross-package coverage measurement.

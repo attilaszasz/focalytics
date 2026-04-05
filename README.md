@@ -44,6 +44,8 @@ The command scans the target directory and writes a timestamped HTML report into
 focalytics_report_20260405_1045.html
 ```
 
+When you run the command in a terminal, focalytics shows a live stage-based progress view while it scans and renders. When stdout or stderr is redirected, it stays quiet apart from warnings and the final report path so shell pipelines remain script-friendly.
+
 ## Install
 
 Download the correct archive for your platform from the latest GitHub Release:

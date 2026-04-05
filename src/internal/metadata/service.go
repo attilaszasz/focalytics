@@ -39,6 +39,13 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 		sink = progress.NoopSink{}
 	}
 
+	totalImages := 0
+	for _, candidate := range discoveryResult.Candidates {
+		if candidate.Kind == discovery.CandidateKindImage {
+			totalImages++
+		}
+	}
+
 	sidecars := make(map[string]discovery.Candidate)
 	for _, candidate := range discoveryResult.Candidates {
 		if candidate.Kind != discovery.CandidateKindSidecar {
@@ -48,6 +55,7 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 	}
 
 	result := Result{Facts: make([]Fact, 0, len(discoveryResult.Candidates))}
+	processedImages := 0
 	for _, candidate := range discoveryResult.Candidates {
 		if candidate.Kind != discovery.CandidateKindImage {
 			continue
@@ -165,9 +173,20 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 		}
 
 		result.Facts = append(result.Facts, fact)
+		processedImages++
+		if shouldPublishMetric(processedImages, totalImages) {
+			_ = sink.Publish(progress.Event{Kind: progress.EventKindMetric, Stage: "metadata", Message: "metadata progress", CurrentPath: candidate.Path, ProcessedCount: processedImages, TotalCount: totalImages, Warnings: len(result.Warnings)})
+		}
 	}
 
 	return result, nil
+}
+
+func shouldPublishMetric(processed, total int) bool {
+	if total == 0 {
+		return false
+	}
+	return processed == total || processed%25 == 0
 }
 
 type embeddedValues struct {
@@ -455,5 +474,5 @@ func trimExtension(path string) string {
 }
 
 func publishWarning(sink progress.Sink, path, message string) {
-	_ = sink.Publish(progress.Event{Kind: progress.EventKindWarning, Message: message, CurrentPath: path})
+	_ = sink.Publish(progress.Event{Kind: progress.EventKindWarning, Stage: "metadata", Message: message, CurrentPath: path})
 }

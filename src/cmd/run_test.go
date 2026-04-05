@@ -69,8 +69,11 @@ func TestExecuteEmitsProgressToStderr(t *testing.T) {
 	if exitCode != app.DefaultExitPolicy().Success {
 		t.Fatalf("unexpected exit code: %d", exitCode)
 	}
-	if !strings.Contains(stderr.String(), "candidate discovered") {
-		t.Fatalf("expected progress output, got %q", stderr.String())
+	if strings.Contains(stderr.String(), "candidate discovered") {
+		t.Fatalf("expected per-file progress to be suppressed, got %q", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "embedded metadata unavailable") {
+		t.Fatalf("expected warnings to remain visible, got %q", stderr.String())
 	}
 }
 
@@ -96,6 +99,6 @@ type reportingRunner struct {
 }
 
 func (r *reportingRunner) Run(_ context.Context, request app.ScanRequest) (app.RunResult, error) {
-	_, _ = fmt.Fprintf(request.Stdout, "report\t%s\n", r.path)
+	_, _ = fmt.Fprintf(request.Stdout, "%s\n", r.path)
 	return app.RunResult{ExitCode: app.DefaultExitPolicy().Success}, nil
 }

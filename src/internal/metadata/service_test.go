@@ -88,6 +88,15 @@ func TestRecoverUsesSidecarFallbacks(t *testing.T) {
 	if len(sink.events) == 0 || sink.events[0].Kind != progress.EventKindWarning {
 		t.Fatalf("expected warning event, got %+v", sink.events)
 	}
+	foundMetric := false
+	for _, event := range sink.events {
+		if event.Kind == progress.EventKindMetric && event.Stage == "metadata" && event.ProcessedCount == 1 && event.TotalCount == 1 {
+			foundMetric = true
+		}
+	}
+	if !foundMetric {
+		t.Fatalf("expected metadata progress metric, got %+v", sink.events)
+	}
 }
 
 func TestRecoverDerivesNormalizedFocalLengthFromCropFactor(t *testing.T) {

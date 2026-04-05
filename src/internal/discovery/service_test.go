@@ -53,8 +53,8 @@ func TestDiscoverReturnsDeterministicCandidates(t *testing.T) {
 		t.Fatalf("unexpected candidates: got %v want %v", got, want)
 	}
 
-	if !strings.Contains(stdout.String(), "image\ta/earlier.jpeg") {
-		t.Fatalf("expected candidate stream output, got %q", stdout.String())
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no candidate stream output, got %q", stdout.String())
 	}
 	if result.WarningsObserved != 0 {
 		t.Fatalf("expected no warnings, got %d", result.WarningsObserved)
@@ -114,8 +114,8 @@ func TestDiscoverWarnsOnUnreadableChildAndContinues(t *testing.T) {
 	if len(sink.events) == 0 || sink.events[len(sink.events)-1].Kind != progress.EventKindWarning {
 		t.Fatalf("expected warning event, got %+v", sink.events)
 	}
-	if !strings.Contains(stdout.String(), "image\tgood.jpg") {
-		t.Fatalf("expected candidate output, got %q", stdout.String())
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no candidate output, got %q", stdout.String())
 	}
 }
 

@@ -33,8 +33,8 @@ func TestGenerateWritesReportAndPrintsPath(t *testing.T) {
 	if result.Path != expectedPath {
 		t.Fatalf("unexpected report path: got %q want %q", result.Path, expectedPath)
 	}
-	if !strings.Contains(stdout.String(), expectedPath) {
-		t.Fatalf("expected stdout to mention report path, got %q", stdout.String())
+	if stdout.String() != expectedPath+"\n" {
+		t.Fatalf("expected stdout to equal report path, got %q", stdout.String())
 	}
 	content, err := os.ReadFile(expectedPath)
 	if err != nil {

@@ -62,7 +62,7 @@ func buildScanRequest(args []string, streams IOStreams) (app.ScanRequest, error)
 
 	return app.ScanRequest{
 		ArchiveRoot: archiveRoot,
-		Interactive: false,
+		Interactive: streams.Interactive,
 		Stdout:      streams.Out,
 		Stderr:      streams.ErrOut,
 	}, nil

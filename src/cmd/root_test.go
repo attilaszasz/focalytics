@@ -3,9 +3,12 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/attila/focalytics/internal/app"
+	"github.com/attila/focalytics/internal/progress"
 )
 
 type fakeRunner struct {
@@ -44,5 +47,46 @@ func TestExecuteRequiresArchiveRoot(t *testing.T) {
 	}
 	if stderr.Len() == 0 {
 		t.Fatal("expected validation error on stderr")
+	}
+}
+
+func TestSupportsInteractiveOutputRequiresTerminalWriters(t *testing.T) {
+	stdout, err := os.CreateTemp(t.TempDir(), "stdout")
+	if err != nil {
+		t.Fatalf("create temp stdout: %v", err)
+	}
+	stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatalf("create temp stderr: %v", err)
+	}
+	defer func() {
+		_ = stdout.Close()
+		_ = stderr.Close()
+	}()
+
+	if supportsInteractiveOutput(stdout, stderr) {
+		t.Fatal("expected regular files to be non-interactive")
+	}
+	if supportsInteractiveOutput(&bytes.Buffer{}, &bytes.Buffer{}) {
+		t.Fatal("expected buffers to be non-interactive")
+	}
+}
+
+func TestRunInteractiveProgressReturnsAfterClose(t *testing.T) {
+	events := make(chan progress.Event, 1)
+	buffer := &bytes.Buffer{}
+	wait := runInteractiveProgress(events, buffer)
+	events <- progress.Event{Kind: progress.EventKindStageStart, Stage: "discovery", Message: "stage started"}
+
+	done := make(chan struct{})
+	go func() {
+		wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("interactive progress did not shut down")
 	}
 }

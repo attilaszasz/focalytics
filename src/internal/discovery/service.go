@@ -96,9 +96,6 @@ func (s Service) walk(root, current string, result *Result, sink progress.Sink, 
 
 		result.Candidates = append(result.Candidates, candidate)
 		result.CandidatesFound++
-		if stdout != nil {
-			_, _ = fmt.Fprintf(stdout, "%s\t%s\n", candidate.Kind, candidate.RelativePath)
-		}
 		s.publishProgress(sink, entryPath, *result, start, "candidate discovered")
 	}
 
@@ -130,6 +127,7 @@ func (s Service) publishProgress(sink progress.Sink, currentPath string, result 
 	}
 
 	_ = sink.Publish(progress.Event{
+		Stage:               "discovery",
 		Kind:                progress.EventKindStatus,
 		Message:             message,
 		CurrentPath:         currentPath,
@@ -150,6 +148,7 @@ func (s Service) recordWarning(result *Result, sink progress.Sink, path, message
 		throughput = float64(result.FilesSeen) / elapsed
 	}
 	_ = sink.Publish(progress.Event{
+		Stage:               "discovery",
 		Kind:                progress.EventKindWarning,
 		Message:             message,
 		CurrentPath:         path,

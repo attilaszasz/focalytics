@@ -47,13 +47,8 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 		t.Fatalf("expected success exit code, got %d", exitCode)
 	}
 	output := stdout.String()
-	for _, fragment := range []string{"image\tcover.jpeg", "image\tnested/frame.jpg", "sidecar\tnested/frame.xmp"} {
-		if !strings.Contains(output, fragment) {
-			t.Fatalf("expected stdout to contain %q, got %q", fragment, output)
-		}
-	}
-	if strings.Contains(output, "ignore.txt") {
-		t.Fatalf("expected unsupported files to be skipped, got %q", output)
+	if strings.Contains(output, "cover.jpeg") || strings.Contains(output, "frame.jpg") || strings.Contains(output, "frame.xmp") {
+		t.Fatalf("expected candidate output to be suppressed, got %q", output)
 	}
 	reportFiles, err := filepath.Glob(filepath.Join(workDir, "focalytics_report_*.html"))
 	if err != nil {
@@ -74,13 +69,13 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 		t.Fatalf("expected generated report content, got %q", string(reportContent))
 	}
 	stderrOutput := stderr.String()
-	if !strings.Contains(stderrOutput, "throughput=") {
-		t.Fatalf("expected progress metrics on stderr, got %q", stderrOutput)
+	if strings.Contains(stderrOutput, "throughput=") {
+		t.Fatalf("expected non-interactive stderr to stay quiet, got %q", stderrOutput)
 	}
 	if !strings.Contains(stderrOutput, "embedded metadata unavailable") {
 		t.Fatalf("expected metadata warning on stderr, got %q", stderrOutput)
 	}
-	if !strings.Contains(stderrOutput, "run complete") {
-		t.Fatalf("expected full pipeline completion on stderr, got %q", stderrOutput)
+	if strings.Contains(stderrOutput, "run complete") {
+		t.Fatalf("expected lifecycle chatter to be suppressed, got %q", stderrOutput)
 	}
 }

@@ -54,8 +54,11 @@ func TestRunnerRunPublishesLifecycleEvents(t *testing.T) {
 	if result.ExitCode != app.DefaultExitPolicy().Success {
 		t.Fatalf("unexpected exit code: got %d", result.ExitCode)
 	}
-	if len(sink.events) != 2 {
-		t.Fatalf("expected start and completion events, got %d", len(sink.events))
+	if len(sink.events) != 4 {
+		t.Fatalf("expected run lifecycle and stage lifecycle events, got %d", len(sink.events))
+	}
+	if sink.events[1].Kind != progress.EventKindStageStart || sink.events[2].Kind != progress.EventKindStageEnd {
+		t.Fatalf("expected stage lifecycle events, got %+v", sink.events)
 	}
 }
 

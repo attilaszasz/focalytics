@@ -46,7 +46,7 @@ dod_source: ""
 
 > Replace the per-file text output with an interactive terminal UI so large-archive scans show clear stage progress instead of flooding the screen.
 
-- [ ] E007 [P1] [PRODUCT] {PRD:CAP-001}{SAD:ADR-001} Interactive Progress Display — replace per-file text flood with Bubble Tea TUI showing stage spinners, live counters, and non-interactive fallback.
+- [X] E007 [P1] [PRODUCT] {PRD:CAP-001}{SAD:ADR-001} Interactive Progress Display — replace per-file text flood with Bubble Tea TUI showing stage spinners, live counters, and non-interactive fallback.
 
 ## Dependency Diagram
 
