@@ -34,7 +34,7 @@ dod_source: ""
 
 > Once normalized facts exist, the product can derive stable archive-level summaries without introducing persistent storage.
 
-- [ ] E004 [P1] [PRODUCT] {PRD:CAP-004,CAP-005,CAP-006}{SAD:ADR-002,ADR-003} Aggregate Insight Metrics — build in-memory summaries for timeline, gear, exposure, and data-quality dimensions.
+- [X] E004 [P1] [PRODUCT] {PRD:CAP-004,CAP-005,CAP-006}{SAD:ADR-002,ADR-003} Aggregate Insight Metrics — build in-memory summaries for timeline, gear, exposure, and data-quality dimensions.
 
 ### Wave 5 — User-Facing Report
 

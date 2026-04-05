@@ -50,4 +50,7 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 	if !strings.Contains(stderrOutput, "embedded metadata unavailable") {
 		t.Fatalf("expected metadata warning on stderr, got %q", stderrOutput)
 	}
+	if !strings.Contains(stderrOutput, "run complete") {
+		t.Fatalf("expected full pipeline completion on stderr, got %q", stderrOutput)
+	}
 }

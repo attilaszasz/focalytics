@@ -18,6 +18,7 @@ type RunContext struct {
 const (
 	ArtifactDiscoveryResult = "discovery.result"
 	ArtifactMetadataResult  = "metadata.result"
+	ArtifactAggregateResult = "aggregate.result"
 )
 
 type StageStatus string
