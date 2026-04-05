@@ -48,7 +48,7 @@ focalytics_report_20260405_1045.html
 
 Download the correct archive for your platform from the latest GitHub Release:
 
-https://github.com/attila/focalytics/releases/latest
+https://github.com/attilaszasz/focalytics/releases/latest
 
 Choose the asset that matches your operating system and CPU architecture:
 
@@ -64,7 +64,7 @@ Choose the asset that matches your operating system and CPU architecture:
 Apple Silicon (arm64):
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_darwin_arm64.tar.gz
+curl -fsSLO https://github.com/attilaszasz/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_darwin_arm64.tar.gz
 tar -xzf focalytics_v0.0.6_darwin_arm64.tar.gz
 sudo mv focalytics /usr/local/bin/
 ```
@@ -85,7 +85,7 @@ Add `~/.local/bin` to your `PATH` in your shell profile if it is not already the
 x86_64 (amd64):
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_linux_amd64.tar.gz
+curl -fsSLO https://github.com/attilaszasz/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_linux_amd64.tar.gz
 tar -xzf focalytics_v0.0.6_linux_amd64.tar.gz
 sudo mv focalytics /usr/local/bin/
 ```
@@ -104,7 +104,7 @@ mv focalytics "$HOME/.local/bin/"
 64-bit Intel or AMD (amd64) via PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri https://github.com/attila/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_windows_amd64.zip -OutFile focalytics.zip
+Invoke-WebRequest -Uri https://github.com/attilaszasz/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_windows_amd64.zip -OutFile focalytics.zip
 Expand-Archive .\focalytics.zip -DestinationPath .\focalytics
 New-Item -ItemType Directory -Force "$HOME\bin" | Out-Null
 Move-Item .\focalytics\focalytics.exe "$HOME\bin\focalytics.exe" -Force
@@ -121,7 +121,7 @@ Each release includes a checksum file named `focalytics_v0.0.6_checksums.txt`.
 To verify a downloaded archive:
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_checksums.txt
+curl -fsSLO https://github.com/attilaszasz/focalytics/releases/download/v0.0.6/focalytics_v0.0.6_checksums.txt
 sha256sum -c focalytics_v0.0.6_checksums.txt --ignore-missing
 ```
 
