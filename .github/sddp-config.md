@@ -16,7 +16,7 @@
 
 ## Project Plan
 
-**Path**: 
+**Path**: specs/project-plan.md
 
 ## Checklist Settings
 
