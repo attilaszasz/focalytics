@@ -4,7 +4,7 @@
 
 ## Product Document
 
-**Path**: 
+**Path**: specs/prd.md
 
 ## Technical Context Document
 
