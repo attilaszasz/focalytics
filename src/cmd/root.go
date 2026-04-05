@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/attila/focalytics/internal/app"
+	"github.com/attila/focalytics/internal/discovery"
 	"github.com/attila/focalytics/internal/pipeline"
 	"github.com/attila/focalytics/internal/progress"
 )
@@ -42,7 +43,8 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		ErrOut: stderr,
 	}
 	exitPolicy := app.DefaultExitPolicy()
-	runner := pipeline.NewRunner(nil, progress.NoopSink{}, log.New(stderr, "", 0), exitPolicy)
+	sink := progress.TextSink{Writer: stderr}
+	runner := pipeline.NewRunner([]pipeline.Stage{discovery.NewStage(discovery.NewService())}, sink, log.New(stderr, "", 0), exitPolicy)
 	command := NewRootCommand(runner, exitPolicy, streams)
 	if len(args) > 0 && args[0] != "run" && args[0] != "help" && args[0] != "completion" && args[0][0] != '-' {
 		args = append([]string{"run"}, args...)

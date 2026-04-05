@@ -9,9 +9,12 @@ const (
 )
 
 type Event struct {
-	Kind        EventKind
-	Message     string
-	CurrentPath string
-	FilesSeen   int
-	Warnings    int
+	Kind                EventKind
+	Message             string
+	CurrentPath         string
+	FilesSeen           int
+	Warnings            int
+	CandidatesFound     int
+	DirectoriesSeen     int
+	ThroughputPerSecond float64
 }

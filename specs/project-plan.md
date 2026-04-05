@@ -21,7 +21,7 @@ dod_source: ""
 
 > File discovery and release automation can proceed in parallel once the executable skeleton and build contract exist.
 
-- [ ] E002 [P1] [PRODUCT] [P] {PRD:CAP-001}{SAD:ADR-001,ADR-002} Discover Archive Files — implement recursive traversal, file candidate filtering, deterministic scan boundaries, and live progress accounting.
+- [X] E002 [P1] [PRODUCT] [P] {PRD:CAP-001}{SAD:ADR-001,ADR-002} Discover Archive Files — implement recursive traversal, file candidate filtering, deterministic scan boundaries, and live progress accounting.
 - [X] E006 [P2] [TECHNICAL] [P] {PRD:CAP-007}{SAD:ADR-005} Publish Installable Releases — automate cross-platform builds, checksums, and package-manager metadata from immutable release artifacts.
 
 ### Wave 3 — Metadata Recovery
