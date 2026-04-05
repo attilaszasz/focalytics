@@ -1,6 +1,6 @@
 # focalytics
 
-<!-- release-version: 0.0.4 -->
+<!-- release-version: 0.0.5 -->
 
 focalytics is a local-first command-line tool that scans a photo archive and generates a self-contained HTML report about how that archive was shot over time.
 
@@ -64,8 +64,8 @@ Choose the asset that matches your operating system and CPU architecture:
 Apple Silicon (arm64):
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.4/focalytics_v0.0.4_darwin_arm64.tar.gz
-tar -xzf focalytics_v0.0.4_darwin_arm64.tar.gz
+curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.5/focalytics_v0.0.5_darwin_arm64.tar.gz
+tar -xzf focalytics_v0.0.5_darwin_arm64.tar.gz
 sudo mv focalytics /usr/local/bin/
 ```
 
@@ -85,8 +85,8 @@ Add `~/.local/bin` to your `PATH` in your shell profile if it is not already the
 x86_64 (amd64):
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.4/focalytics_v0.0.4_linux_amd64.tar.gz
-tar -xzf focalytics_v0.0.4_linux_amd64.tar.gz
+curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.5/focalytics_v0.0.5_linux_amd64.tar.gz
+tar -xzf focalytics_v0.0.5_linux_amd64.tar.gz
 sudo mv focalytics /usr/local/bin/
 ```
 
@@ -104,7 +104,7 @@ mv focalytics "$HOME/.local/bin/"
 64-bit Intel or AMD (amd64) via PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri https://github.com/attila/focalytics/releases/download/v0.0.4/focalytics_v0.0.4_windows_amd64.zip -OutFile focalytics.zip
+Invoke-WebRequest -Uri https://github.com/attila/focalytics/releases/download/v0.0.5/focalytics_v0.0.5_windows_amd64.zip -OutFile focalytics.zip
 Expand-Archive .\focalytics.zip -DestinationPath .\focalytics
 New-Item -ItemType Directory -Force "$HOME\bin" | Out-Null
 Move-Item .\focalytics\focalytics.exe "$HOME\bin\focalytics.exe" -Force
@@ -116,13 +116,13 @@ If `$HOME\bin` is not on your user `Path`, add it so `focalytics.exe` can be sta
 
 ## Verify Your Download
 
-Each release includes a checksum file named `focalytics_v0.0.4_checksums.txt`.
+Each release includes a checksum file named `focalytics_v0.0.5_checksums.txt`.
 
 To verify a downloaded archive:
 
 ```bash
-curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.4/focalytics_v0.0.4_checksums.txt
-sha256sum -c focalytics_v0.0.4_checksums.txt --ignore-missing
+curl -fsSLO https://github.com/attila/focalytics/releases/download/v0.0.5/focalytics_v0.0.5_checksums.txt
+sha256sum -c focalytics_v0.0.5_checksums.txt --ignore-missing
 ```
 
 On macOS, use `shasum -a 256` instead of `sha256sum`.
