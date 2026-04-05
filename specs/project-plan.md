@@ -28,7 +28,7 @@ dod_source: ""
 
 > This wave turns discovered files into trustworthy normalized facts while preserving provenance and exclusion visibility.
 
-- [ ] E003 [P1] [PRODUCT] {PRD:CAP-002,CAP-006}{SAD:ADR-003} Recover Metadata Facts — extract EXIF and XMP metadata, apply defined fallbacks, and record per-metric exclusions.
+- [X] E003 [P1] [PRODUCT] {PRD:CAP-002,CAP-006}{SAD:ADR-003} Recover Metadata Facts — extract EXIF and XMP metadata, apply defined fallbacks, and record per-metric exclusions.
 
 ### Wave 4 — Insight Aggregation
 

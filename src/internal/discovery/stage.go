@@ -19,10 +19,11 @@ func (s Stage) Name() string {
 }
 
 func (s Stage) Run(_ context.Context, runContext app.RunContext) (app.StageResult, error) {
-	_, err := s.service.Discover(runContext.Request.ArchiveRoot, runContext.ProgressSink, runContext.Request.Stdout)
+	result, err := s.service.Discover(runContext.Request.ArchiveRoot, runContext.ProgressSink, runContext.Request.Stdout)
 	if err != nil {
 		return app.StageResult{StageName: s.Name(), Status: app.StageStatusFailure, Fatal: true, ErrorMessage: err.Error()}, err
 	}
+	runContext.SetArtifact(app.ArtifactDiscoveryResult, result)
 
 	return app.StageResult{StageName: s.Name(), Status: app.StageStatusSuccess}, nil
 }

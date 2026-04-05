@@ -43,7 +43,11 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 	if strings.Contains(output, "ignore.txt") {
 		t.Fatalf("expected unsupported files to be skipped, got %q", output)
 	}
-	if !strings.Contains(stderr.String(), "throughput=") {
-		t.Fatalf("expected progress metrics on stderr, got %q", stderr.String())
+	stderrOutput := stderr.String()
+	if !strings.Contains(stderrOutput, "throughput=") {
+		t.Fatalf("expected progress metrics on stderr, got %q", stderrOutput)
+	}
+	if !strings.Contains(stderrOutput, "embedded metadata unavailable") {
+		t.Fatalf("expected metadata warning on stderr, got %q", stderrOutput)
 	}
 }

@@ -12,7 +12,13 @@ type RunContext struct {
 	ExitPolicy   ExitPolicy
 	ProgressSink progress.Sink
 	Logger       *log.Logger
+	Artifacts    map[string]any
 }
+
+const (
+	ArtifactDiscoveryResult = "discovery.result"
+	ArtifactMetadataResult  = "metadata.result"
+)
 
 type StageStatus string
 
@@ -44,5 +50,21 @@ func NewRunContext(request ScanRequest, exitPolicy ExitPolicy, sink progress.Sin
 		ExitPolicy:   exitPolicy,
 		ProgressSink: sink,
 		Logger:       logger,
+		Artifacts:    map[string]any{},
 	}
+}
+
+func (r RunContext) SetArtifact(key string, value any) {
+	if r.Artifacts == nil {
+		return
+	}
+	r.Artifacts[key] = value
+}
+
+func (r RunContext) Artifact(key string) (any, bool) {
+	if r.Artifacts == nil {
+		return nil, false
+	}
+	value, ok := r.Artifacts[key]
+	return value, ok
 }
