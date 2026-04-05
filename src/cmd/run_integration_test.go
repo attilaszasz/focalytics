@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -29,6 +30,17 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 	}
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
+	workDir := t.TempDir()
+	originalWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatalf("chdir workdir: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(originalWorkingDirectory)
+	}()
 
 	exitCode := Execute([]string{archiveRoot}, bytes.NewBuffer(nil), stdout, stderr)
 	if exitCode != app.DefaultExitPolicy().Success {
@@ -42,6 +54,24 @@ func TestExecuteIntegrationWithLocalDirectory(t *testing.T) {
 	}
 	if strings.Contains(output, "ignore.txt") {
 		t.Fatalf("expected unsupported files to be skipped, got %q", output)
+	}
+	reportFiles, err := filepath.Glob(filepath.Join(workDir, "focalytics_report_*.html"))
+	if err != nil {
+		t.Fatalf("glob report files: %v", err)
+	}
+	if len(reportFiles) != 1 {
+		t.Fatalf("expected exactly one report file, got %v", reportFiles)
+	}
+	sort.Strings(reportFiles)
+	if !strings.Contains(output, reportFiles[0]) {
+		t.Fatalf("expected stdout to mention report path %q, got %q", reportFiles[0], output)
+	}
+	reportContent, err := os.ReadFile(reportFiles[0])
+	if err != nil {
+		t.Fatalf("read report file: %v", err)
+	}
+	if !strings.Contains(string(reportContent), "focalytics archive report") {
+		t.Fatalf("expected generated report content, got %q", string(reportContent))
 	}
 	stderrOutput := stderr.String()
 	if !strings.Contains(stderrOutput, "throughput=") {

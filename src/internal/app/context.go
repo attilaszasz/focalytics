@@ -19,6 +19,7 @@ const (
 	ArtifactDiscoveryResult = "discovery.result"
 	ArtifactMetadataResult  = "metadata.result"
 	ArtifactAggregateResult = "aggregate.result"
+	ArtifactRenderResult    = "render.result"
 )
 
 type StageStatus string

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,4 +61,30 @@ func TestExecuteEmitsProgressToStderr(t *testing.T) {
 	if !strings.Contains(stderr.String(), "candidate discovered") {
 		t.Fatalf("expected progress output, got %q", stderr.String())
 	}
+}
+
+func TestNewRunCommandPreservesRunnerStdout(t *testing.T) {
+	archiveRoot := t.TempDir()
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	runner := &reportingRunner{path: "/tmp/focalytics_report_20260405_1105.html"}
+
+	command := NewRunCommand(runner, app.DefaultExitPolicy(), IOStreams{Out: stdout, ErrOut: stderr})
+	command.SetArgs([]string{archiveRoot})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("expected valid archive root to execute cleanly: %v", err)
+	}
+	if !strings.Contains(stdout.String(), runner.path) {
+		t.Fatalf("expected stdout to contain runner report path, got %q", stdout.String())
+	}
+}
+
+type reportingRunner struct {
+	path string
+}
+
+func (r *reportingRunner) Run(_ context.Context, request app.ScanRequest) (app.RunResult, error) {
+	_, _ = fmt.Fprintf(request.Stdout, "report\t%s\n", r.path)
+	return app.RunResult{ExitCode: app.DefaultExitPolicy().Success}, nil
 }

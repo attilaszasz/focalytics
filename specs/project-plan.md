@@ -40,7 +40,7 @@ dod_source: ""
 
 > The final MVP wave converts aggregates into the self-contained offline report that users can open locally.
 
-- [ ] E005 [P1] [PRODUCT] {PRD:CAP-003,CAP-004,CAP-005,CAP-006}{SAD:ADR-004} Render Offline Report — generate the self-contained HTML dashboard with summary sections, charts, and exclusion footnotes.
+- [X] E005 [P1] [PRODUCT] {PRD:CAP-003,CAP-004,CAP-005,CAP-006}{SAD:ADR-004} Render Offline Report — generate the self-contained HTML dashboard with summary sections, charts, and exclusion footnotes.
 
 ## Dependency Diagram
 
