@@ -136,7 +136,13 @@ func topLabel(rows []aggregate.RankedBucket) string {
 	if len(rows) == 0 {
 		return "Unavailable"
 	}
-	return rows[0].Label
+	top := rows[0]
+	for _, row := range rows[1:] {
+		if row.Count > top.Count {
+			top = row
+		}
+	}
+	return top.Label
 }
 
 func barRows(rows []aggregate.TimelineBucket) []BarRow {

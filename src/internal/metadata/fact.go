@@ -22,6 +22,7 @@ const (
 	ProvenanceSidecar                  ProvenanceSource = "sidecar"
 	ProvenanceFileTimestamp            ProvenanceSource = "file_timestamp"
 	ProvenanceDirectoryHint            ProvenanceSource = "directory_hint"
+	ProvenanceDerivedCropFactor        ProvenanceSource = "derived_crop_factor"
 	ProvenanceDerivedActualFocalLength ProvenanceSource = "derived_actual_focal_length"
 )
 

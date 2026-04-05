@@ -90,6 +90,131 @@ func TestRecoverUsesSidecarFallbacks(t *testing.T) {
 	}
 }
 
+func TestRecoverDerivesNormalizedFocalLengthFromCropFactor(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "aps-c.jpg")
+	sidecarPath := filepath.Join(root, "gallery", "aps-c.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="85" tiff:Model="Canon EOS DIGITAL REBEL XT"/></rdf:RDF></x:xmpmeta>`))
+
+	service := NewService()
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/aps-c.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/aps-c.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	fact := result.Facts[0]
+	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 136 {
+		t.Fatalf("unexpected crop-derived normalized focal length: %+v", fact.NormalizedFocalLengthMM)
+	}
+	if fact.Provenance[MetricNormalizedFocalLength] != ProvenanceDerivedCropFactor {
+		t.Fatalf("expected crop-factor provenance, got %s", fact.Provenance[MetricNormalizedFocalLength])
+	}
+}
+
+func TestRecoverDerivesNormalizedFocalLengthForFullFrameBody(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "full-frame.jpg")
+	sidecarPath := filepath.Join(root, "gallery", "full-frame.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="50" tiff:Model="Canon EOS 5D Mark IV"/></rdf:RDF></x:xmpmeta>`))
+
+	service := NewService()
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/full-frame.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/full-frame.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	fact := result.Facts[0]
+	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 50 {
+		t.Fatalf("unexpected full-frame normalized focal length: %+v", fact.NormalizedFocalLengthMM)
+	}
+	if fact.Provenance[MetricNormalizedFocalLength] != ProvenanceDerivedCropFactor {
+		t.Fatalf("expected crop-factor provenance, got %s", fact.Provenance[MetricNormalizedFocalLength])
+	}
+}
+
+func TestRecoverSkipsActualFocalFallbackForPhoneWithoutEquivalent(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "phone.jpg")
+	sidecarPath := filepath.Join(root, "gallery", "phone.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="6.9" tiff:Model="iPhone 15 Pro"/></rdf:RDF></x:xmpmeta>`))
+
+	service := NewService()
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/phone.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/phone.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	fact := result.Facts[0]
+	if fact.NormalizedFocalLengthMM != nil {
+		t.Fatalf("expected no normalized focal fallback for phone, got %+v", fact.NormalizedFocalLengthMM)
+	}
+	if !hasExclusion(fact, MetricNormalizedFocalLength) {
+		t.Fatalf("expected normalized focal exclusion, got %+v", fact.Exclusions)
+	}
+}
+
+func TestRecoverFallsBackToActualFocalLengthForUnknownCamera(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "unknown.jpg")
+	sidecarPath := filepath.Join(root, "gallery", "unknown.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="42" tiff:Model="Unknown Prototype Camera"/></rdf:RDF></x:xmpmeta>`))
+
+	service := NewService()
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/unknown.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/unknown.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	fact := result.Facts[0]
+	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 42 {
+		t.Fatalf("expected raw focal fallback for unknown camera, got %+v", fact.NormalizedFocalLengthMM)
+	}
+	if fact.Provenance[MetricNormalizedFocalLength] != ProvenanceDerivedActualFocalLength {
+		t.Fatalf("expected raw-focal provenance, got %s", fact.Provenance[MetricNormalizedFocalLength])
+	}
+}
+
+func TestRecoverMixedCropFactorsProduceDifferentNormalizedFocalLengths(t *testing.T) {
+	root := t.TempDir()
+	firstImagePath := filepath.Join(root, "gallery", "aps-c.jpg")
+	firstSidecarPath := filepath.Join(root, "gallery", "aps-c.xmp")
+	secondImagePath := filepath.Join(root, "gallery", "full-frame.jpg")
+	secondSidecarPath := filepath.Join(root, "gallery", "full-frame.xmp")
+	writeFixtureFile(t, firstImagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, secondImagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, firstSidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="50" tiff:Model="Canon EOS 450D"/></rdf:RDF></x:xmpmeta>`))
+	writeFixtureFile(t, secondSidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="50" tiff:Model="Canon EOS 5D Mark IV"/></rdf:RDF></x:xmpmeta>`))
+
+	service := NewService()
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: firstImagePath, RelativePath: "gallery/aps-c.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: firstSidecarPath, RelativePath: "gallery/aps-c.xmp"},
+		{Kind: discovery.CandidateKindImage, Path: secondImagePath, RelativePath: "gallery/full-frame.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: secondSidecarPath, RelativePath: "gallery/full-frame.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	if len(result.Facts) != 2 {
+		t.Fatalf("expected two facts, got %d", len(result.Facts))
+	}
+	if *result.Facts[0].NormalizedFocalLengthMM == *result.Facts[1].NormalizedFocalLengthMM {
+		t.Fatalf("expected different normalized focal lengths, got %+v and %+v", result.Facts[0].NormalizedFocalLengthMM, result.Facts[1].NormalizedFocalLengthMM)
+	}
+}
+
 func TestRecoverUsesFileTimestampFallbackAndExclusions(t *testing.T) {
 	root := t.TempDir()
 	imagePath := filepath.Join(root, "gallery", "no-metadata.jpg")

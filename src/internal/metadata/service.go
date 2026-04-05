@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -126,7 +127,12 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 		if fact.NormalizedFocalLengthMM == nil {
 			s.applyMetricFloat(&fact, MetricNormalizedFocalLength, xmpValues.NormalizedFocalLengthMM, ProvenanceSidecar)
 		}
-		if fact.NormalizedFocalLengthMM == nil && fact.FocalLengthMM != nil {
+		if fact.NormalizedFocalLengthMM == nil {
+			if value, ok := deriveNormalizedFocalLength(fact.CameraModel, fact.FocalLengthMM); ok {
+				s.applyMetricFloat(&fact, MetricNormalizedFocalLength, value, ProvenanceDerivedCropFactor)
+			}
+		}
+		if fact.NormalizedFocalLengthMM == nil && shouldAllowActualFocalFallback(fact.CameraModel) && fact.FocalLengthMM != nil {
 			value := *fact.FocalLengthMM
 			s.applyMetricFloat(&fact, MetricNormalizedFocalLength, &value, ProvenanceDerivedActualFocalLength)
 		}
@@ -233,6 +239,26 @@ func exifFloat(decoded *exif.Exif, field exif.FieldName) *float64 {
 		return &value
 	}
 	return parseFloatPointer(strings.Trim(strings.TrimSpace(tag.String()), "\""))
+}
+
+func deriveNormalizedFocalLength(cameraModel string, focalLengthMM *float64) (*float64, bool) {
+	if focalLengthMM == nil {
+		return nil, false
+	}
+	profile, ok := lookupCameraProfile(cameraModel)
+	if !ok || profile.CropFactor == nil {
+		return nil, false
+	}
+	value := math.Round((*focalLengthMM)*(*profile.CropFactor)*10) / 10
+	return &value, true
+}
+
+func shouldAllowActualFocalFallback(cameraModel string) bool {
+	profile, ok := lookupCameraProfile(cameraModel)
+	if !ok {
+		return true
+	}
+	return profile.Fallback == focalFallbackAllowActual
 }
 
 func exifInt(decoded *exif.Exif, field exif.FieldName) *int {

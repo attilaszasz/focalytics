@@ -97,6 +97,21 @@ func TestRenderStageStoresArtifact(t *testing.T) {
 	}
 }
 
+func TestBuildModelSelectsTopFocalByHighestCount(t *testing.T) {
+	summary := renderFixtureSummary()
+	summary.Technical.FocalLengths = []aggregate.RankedBucket{
+		{Key: "000176", Label: "17.6mm", Count: 4},
+		{Key: "000850", Label: "85mm", Count: 127},
+		{Key: "000500", Label: "50mm", Count: 110},
+	}
+
+	model := buildModel(summary, "/archives/gallery", time.Date(2026, time.April, 5, 11, 31, 0, 0, time.UTC))
+
+	if model.Overview.TopFocal != "85mm" {
+		t.Fatalf("unexpected top focal label: got %q want %q", model.Overview.TopFocal, "85mm")
+	}
+}
+
 func renderFixtureSummary() aggregate.Result {
 	first := time.Date(2020, time.January, 2, 10, 0, 0, 0, time.UTC)
 	last := time.Date(2021, time.May, 3, 12, 0, 0, 0, time.UTC)
