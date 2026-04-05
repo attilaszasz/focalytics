@@ -198,3 +198,44 @@ jobs:
             *) release_tag="v$release_tag" ;;
           esac
           gh release upload "$release_tag" "$RUNNER_TEMP/package-inputs"/*.json --clobber
+
+  update-readme:
+    name: Update README version
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Resolve release version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            raw="${{ github.event.inputs.version }}"
+          else
+            raw="${GITHUB_REF_NAME}"
+          fi
+          # Strip leading v for the bare semver used in the marker
+          case "$raw" in
+            v*) printf 'value=%s\n' "${raw#v}" >> "$GITHUB_OUTPUT" ;;
+            *)  printf 'value=%s\n' "$raw"     >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Replace version in README
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -eu
+          old_version=$(grep -oP '(?<=<!-- release-version: )\S+(?= -->)' README.md)
+          if [ "$old_version" = "$NEW_VERSION" ]; then
+            echo "README already at version $NEW_VERSION, skipping."
+            exit 0
+          fi
+          sed -i "s/${old_version}/${NEW_VERSION}/g" README.md
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: update README to v${NEW_VERSION}"
+          git push
