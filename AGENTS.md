@@ -50,7 +50,7 @@ Markers:
 
 ## Communication Style
 
-Agent output MUST be concise and outcome-oriented per `project-instructions.md` §IV. Apply these rules in every SDD phase:
+Agent output MUST be concise and outcome-oriented per the Agent Output Style principle in `project-instructions.md`. Apply these rules in every SDD phase:
 
 - **Progress reports**: Facts and outcomes only — no narration, no restating the task.
 - **Artifact output**: Required sections only — no preamble, no summary epilogue.

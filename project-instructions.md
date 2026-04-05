@@ -1,23 +1,29 @@
 <!-- template-version: 2 -->
-# [PROJECT_NAME] Project Instructions
+# focalytics Project Instructions
 
 ## Core Principles
 
-<!-- 3–7 non-negotiable principles. Each: succinct name, MUST/SHOULD rule, rationale. Add or remove ### blocks as needed. -->
+### I. Narrow Product Scope
 
-### I. [PRINCIPLE_NAME]
+focalytics MUST remain a single-purpose archive-insight CLI; cloud sync, collaboration, editing workflows, metadata write-back, and hosted dashboards stay out of scope unless the Product Document is amended first. — This protects the product promise of fast, zero-config archive analysis instead of drifting into a general photo-management suite.
 
-[PRINCIPLE_RULE] — [PRINCIPLE_RATIONALE]
+### II. Local-First Safety
 
-### II. [PRINCIPLE_NAME]
+Runtime MUST operate offline, MUST never mutate source archives, and MUST treat files, sidecars, directory names, and metadata as untrusted input. — The product's trust model depends on privacy-first local execution and defensive parsing of user-owned archives.
 
-[PRINCIPLE_RULE] — [PRINCIPLE_RATIONALE]
+### III. Modular Pipeline Design
 
-### III. [PRINCIPLE_NAME]
+Implementation MUST keep command handling, discovery, metadata recovery, aggregation, rendering, and release automation in separate modules under /src with explicit package boundaries. — A local modular monolith only stays maintainable if the core pipeline does not collapse into a single orchestration package.
 
-[PRINCIPLE_RULE] — [PRINCIPLE_RATIONALE]
+### IV. Honest Data Reporting
 
-### IV. Agent Output Style
+The product MUST surface fallbacks, exclusions, and parse failures explicitly in logs and generated reports, and SHOULD degrade per file or metric instead of failing the whole run whenever a trustworthy partial result is possible. — Users need to understand what the report represents and where archive data was incomplete or inferred.
+
+### V. Cross-Platform Release Quality
+
+Changes MUST preserve macOS, Windows, and Linux viability and MUST keep GitHub Release artifacts, checksums, and package-manager metadata consistent across channels. — Cross-platform distribution is part of the product value, not an afterthought.
+
+### VI. Agent Output Style
 
 All agent output MUST be concise and outcome-oriented. This principle supersedes any verbose defaults.
 
@@ -30,35 +36,31 @@ All agent output MUST be concise and outcome-oriented. This principle supersedes
 
 ## Technology Stack
 
-<!-- Downstream phases (Plan, QC, Autopilot) read this section as the authoritative tech-stack reference. -->
-
-- **Language/Runtime**: [e.g., TypeScript 5.x / Node 22, Python 3.12, Rust 1.78, Go 1.22]
-- **Frameworks**: [e.g., Next.js 15, Django 5, Actix-web]
-- **Storage**: [e.g., PostgreSQL 16, Redis 7, SQLite — or "none"]
-- **Infrastructure**: [e.g., Docker, AWS ECS, Vercel, bare metal — or "local only"]
+- **Language/Runtime**: Go 1.24
+- **Frameworks**: Cobra, Bubble Tea, Bubbles, go-exif, Go html/template, Go embed
+- **Storage**: none
+- **Infrastructure**: local only; GitHub Actions for release automation
 
 ## Testing & Quality Policy
 
 <!-- QC extracts enforcement rules from this section. Use the keywords below so automated checks activate correctly. -->
 <!-- Keywords recognised by QC: lint, static analysis, code quality, coverage, security, vulnerability, OWASP, WCAG, accessibility, benchmark, performance -->
 
-- **Coverage Target**: [e.g., 80% | 100% | none — omit to skip coverage enforcement]
-- **Required QC Categories**: [e.g., linting, security scanning, accessibility — omit categories you do not require]
-- **Test Strategy**: [e.g., Unit + integration; E2E for critical paths; TDD mandatory]
-- **Linting / Formatting**: [e.g., ESLint + Prettier strict, Clippy, Ruff — or "none"]
+- **Coverage Target**: 80%
+- **Required QC Categories**: linting, security scanning, coverage
+- **Test Strategy**: Unit, integration, golden-file report tests, and malformed-file fixture tests after implementation
+- **Linting / Formatting**: golangci-lint + gofmt
 
 ## Source Code Layout
 
-- **Policy**: [ENFORCE_SRC_ROOT | PRESERVE_EXISTING_LAYOUT]
-- **Convention**: [e.g., Source code under /src; tests co-located in __tests__/; config at repo root]
+- **Policy**: ENFORCE_SRC_ROOT
+- **Convention**: Source code under /src; bootstrap artifacts under /specs; repository config at root
 
 ## Development Workflow
 
-- **Branching**: [e.g., Feature branches from main, squash merge]
-- **Commit Convention**: [e.g., Conventional Commits, free-form]
-- **CI Requirements**: [e.g., All tests pass, lint clean, no type errors before merge]
-
-<!-- Optional: add additional sections below (Security Requirements, Performance Standards, Compliance, etc.) -->
+- **Branching**: Feature branches from main with squash merge
+- **Commit Convention**: Conventional Commits
+- **CI Requirements**: All tests pass, lint clean, security scanning clean, and release build checks stay green before merge
 
 ## Governance
 
@@ -66,7 +68,7 @@ All agent output MUST be concise and outcome-oriented. This principle supersedes
 - Amendments require a version bump with ISO-dated changelog entry.
 - All implementations MUST pass the Instructions Check gate during planning.
 - Complexity beyond these principles MUST be justified and documented.
+- Registered Product Document, Technical Context Document, Deployment & Operations Document, and Project Plan paths in .github/sddp-config.md MUST be preserved unless intentionally replaced.
+- The canonical implementation path is the earliest unchecked P1 epic in specs/project-plan.md unless the user explicitly reprioritizes.
 
-[GOVERNANCE_ADDITIONAL_RULES]
-
-**Version**: [INSTRUCTIONS_VERSION] | **Last Amended**: [LAST_AMENDED_DATE]
+**Version**: 1.0.0 | **Last Amended**: 2026-04-05
