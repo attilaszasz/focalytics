@@ -44,7 +44,7 @@ jobs:
       - name: Run static analysis
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.8
+          version: v2.11.4
           working-directory: src
           args: ./...
 
