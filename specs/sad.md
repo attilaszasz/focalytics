@@ -287,3 +287,6 @@ There is no hosted production environment and no support desk. Operational respo
 - The runtime system has no hosted backend, no persistent application database, and no network dependency during normal use.
 - The core processing pipeline is discovery -> metadata recovery -> normalization -> aggregation -> report rendering, with explicit per-metric exclusions and graceful degradation.
 - Distribution infrastructure centers on immutable GitHub Release artifacts and downstream package-manager metadata derived from those assets.
+- Feature-level command wiring should use constructor-based Cobra commands backed by internal runtime packages rather than package-global registration side effects.
+- Progress reporting should remain a UI-agnostic event stream with a no-op-capable sink so CLI runs stay valid in both TTY and non-interactive environments.
+- The baseline Go QC stack is `gofmt`, `golangci-lint`, `govulncheck`, and native `go test` coverage tooling with cross-package coverage measurement.

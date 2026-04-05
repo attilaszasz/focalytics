@@ -15,7 +15,7 @@ dod_source: ""
 
 > Establish the single-binary application skeleton, shared module contracts, and testable command lifecycle that every later increment relies on.
 
-- [ ] E001 [P1] [TECHNICAL] {SAD:ADR-001,ADR-002} Bootstrap CLI Core — establish the single-binary /src layout, command entrypoint, pipeline contracts, and shared test harness.
+- [X] E001 [P1] [TECHNICAL] {SAD:ADR-001,ADR-002} Bootstrap CLI Core — establish the single-binary /src layout, command entrypoint, pipeline contracts, and shared test harness.
 
 ### Wave 2 — Discovery And Delivery
 
