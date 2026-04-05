@@ -1,0 +1,197 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to publish, with or without leading v"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Validate source module
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: |
+            src/go.sum
+            go.work.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run unit tests
+        run: go test -race -count=1 ./...
+
+      - name: Run integration tests
+        run: go test -tags=integration -count=1 ./...
+
+      - name: Run static analysis
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: src
+          args: ./...
+
+      - name: Run vulnerability scan
+        run: govulncheck ./...
+
+  build:
+    name: Build archives
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: |
+            src/go.sum
+            go.work.sum
+
+      - name: Resolve release version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            printf 'value=%s\n' "${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            printf 'value=%s\n' "${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build archive
+        run: ./scripts/release/build-archive.sh "${{ steps.version.outputs.value }}" "${{ matrix.goos }}" "${{ matrix.goarch }}" "$RUNNER_TEMP/dist"
+
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ runner.temp }}/dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish release assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: |
+            src/go.sum
+            go.work.sum
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/downloads
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Resolve release version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            printf 'value=%s\n' "${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            printf 'value=%s\n' "${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build checksum manifest
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -eu
+          dist_dir="$RUNNER_TEMP/dist"
+          mkdir -p "$dist_dir"
+          find "$RUNNER_TEMP/downloads" -maxdepth 1 -type f -exec cp {} "$dist_dir" \;
+          checksum_name=$(cd src && go run ./tools/releasegen asset-name --version "$VERSION" --field checksums)
+          (
+            cd "$dist_dir"
+            sha256sum focalytics_* > "$checksum_name"
+          )
+          printf 'dir=%s\n' "$dist_dir" >> "$GITHUB_OUTPUT"
+          printf 'checksums=%s\n' "$checksum_name" >> "$GITHUB_OUTPUT"
+        id: checksums
+
+      - name: Verify canonical artifact contract
+        run: |
+          cd src
+          go run ./tools/releasegen verify --version "${{ steps.version.outputs.value }}" --checksums "${{ steps.checksums.outputs.dir }}/${{ steps.checksums.outputs.checksums }}"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+          DIST_DIR: ${{ steps.checksums.outputs.dir }}
+        run: |
+          set -eu
+          release_tag="$VERSION"
+          case "$release_tag" in
+            v*) ;;
+            *) release_tag="v$release_tag" ;;
+          esac
+          if gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release upload "$release_tag" "$DIST_DIR"/* --clobber
+          else
+            gh release create "$release_tag" "$DIST_DIR"/* --title "$release_tag" --generate-notes
+          fi
+
+      - name: Generate package-manager metadata
+        run: |
+          cd src
+          go run ./tools/releasegen metadata \
+            --repo "${GITHUB_REPOSITORY}" \
+            --version "${{ steps.version.outputs.value }}" \
+            --checksums "${{ steps.checksums.outputs.dir }}/${{ steps.checksums.outputs.checksums }}" \
+            --out "${{ runner.temp }}/package-inputs"
+
+      - name: Upload package-manager metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -eu
+          release_tag="$VERSION"
+          case "$release_tag" in
+            v*) ;;
+            *) release_tag="v$release_tag" ;;
+          esac
+          gh release upload "$release_tag" "$RUNNER_TEMP/package-inputs"/*.json --clobber

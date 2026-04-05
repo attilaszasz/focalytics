@@ -25,3 +25,31 @@ func TestRunReturnsSuccessForValidDirectory(t *testing.T) {
 		t.Fatalf("unexpected exit code: got %d want 0", exitCode)
 	}
 }
+
+func TestMainUsesRunExitCode(t *testing.T) {
+	originalArgs := os.Args
+	originalExit := exitFunc
+	t.Cleanup(func() {
+		os.Args = originalArgs
+		exitFunc = originalExit
+	})
+
+	archiveRoot := t.TempDir()
+	os.Args = []string{"focalytics", archiveRoot}
+
+	called := false
+	exitCode := -1
+	exitFunc = func(code int) {
+		called = true
+		exitCode = code
+	}
+
+	main()
+
+	if !called {
+		t.Fatal("expected main to call exit")
+	}
+	if exitCode != 0 {
+		t.Fatalf("unexpected exit code: got %d want 0", exitCode)
+	}
+}
