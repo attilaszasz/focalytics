@@ -79,6 +79,9 @@ func TestRecoverUsesSidecarFallbacks(t *testing.T) {
 	if fact.LensModel != "Test Lens" {
 		t.Fatalf("unexpected lens model: %s", fact.LensModel)
 	}
+	if fact.ISO == nil || *fact.ISO != 200 {
+		t.Fatalf("unexpected ISO: %+v", fact.ISO)
+	}
 	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 127 {
 		t.Fatalf("unexpected normalized focal length: %+v", fact.NormalizedFocalLengthMM)
 	}
@@ -96,6 +99,39 @@ func TestRecoverUsesSidecarFallbacks(t *testing.T) {
 	}
 	if !foundMetric {
 		t.Fatalf("expected metadata progress metric, got %+v", sink.events)
+	}
+}
+
+func TestRecoverUsesSidecarISOFromSequence(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "legacy.crw")
+	sidecarPath := filepath.Join(root, "gallery", "legacy.xmp")
+	sink := &recordingSink{}
+	writeFixtureFile(t, imagePath, []byte("not-a-real-raw"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><tiff:Model>Canon PowerShot G6</tiff:Model><exif:FocalLength>28.8</exif:FocalLength><exif:ExposureTime>1/250</exif:ExposureTime><exif:FNumber>3</exif:FNumber><exif:ISOSpeedRatings><rdf:Seq><rdf:li>50</rdf:li></rdf:Seq></exif:ISOSpeedRatings><xmp:CreateDate>2005-06-14T10:03:26+03:00</xmp:CreateDate></rdf:Description></rdf:RDF></x:xmpmeta>`))
+
+	result, err := NewService().Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/legacy.crw"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/legacy.xmp"},
+	}}, sink)
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+
+	fact := result.Facts[0]
+	if fact.ISO == nil || *fact.ISO != 50 {
+		t.Fatalf("expected ISO from sidecar sequence, got %+v", fact.ISO)
+	}
+	if fact.Provenance[MetricISO] != ProvenanceSidecar {
+		t.Fatalf("expected sidecar ISO provenance, got %s", fact.Provenance[MetricISO])
+	}
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected CRW embedded warning to be suppressed after sidecar recovery, got %+v", result.Warnings)
+	}
+	for _, event := range sink.events {
+		if event.Kind == progress.EventKindWarning {
+			t.Fatalf("expected no warning event after CRW fallback recovery, got %+v", sink.events)
+		}
 	}
 }
 
@@ -224,6 +260,114 @@ func TestRecoverMixedCropFactorsProduceDifferentNormalizedFocalLengths(t *testin
 	}
 }
 
+func TestRecoverCanonicalizesHyphenatedCameraProfiles(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "mft.orf")
+	sidecarPath := filepath.Join(root, "gallery", "mft.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-raw"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" exif:FocalLength="25" tiff:Model="OM-5"/></rdf:RDF></x:xmpmeta>`))
+
+	result, err := NewService().Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/mft.orf"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/mft.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+
+	fact := result.Facts[0]
+	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 50 {
+		t.Fatalf("expected crop-factor normalization for OM-5, got %+v", fact.NormalizedFocalLengthMM)
+	}
+	if fact.Provenance[MetricNormalizedFocalLength] != ProvenanceDerivedCropFactor {
+		t.Fatalf("expected crop-factor provenance, got %s", fact.Provenance[MetricNormalizedFocalLength])
+	}
+}
+
+func TestRecoverUsesPlatformMetadataAfterEmbeddedFailure(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "unsupported.rw2")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-raw"))
+	capturedAt := time.Date(2022, time.August, 13, 8, 51, 55, 0, time.UTC)
+	focalLength := 15.0
+	aperture := 5.6
+	shutter := 0.0025
+	iso := 200
+
+	service := NewService()
+	sink := &recordingSink{}
+	service.platformMetadata = func(string) embeddedValues {
+		return embeddedValues{
+			CapturedAt:     &capturedAt,
+			CameraModel:    "DC-G100",
+			LensModel:      "LEICA DG 12-60/F2.8-4.0",
+			FocalLengthMM:  &focalLength,
+			ApertureF:      &aperture,
+			ShutterSeconds: &shutter,
+			ISO:            &iso,
+		}
+	}
+
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/unsupported.rw2"}}}, sink)
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+
+	fact := result.Facts[0]
+	if fact.CameraModel != "DC-G100" || fact.LensModel != "LEICA DG 12-60/F2.8-4.0" {
+		t.Fatalf("expected platform metadata strings, got %+v", fact)
+	}
+	if fact.CapturedAt == nil || !fact.CapturedAt.Equal(capturedAt) {
+		t.Fatalf("expected platform capture time, got %+v", fact.CapturedAt)
+	}
+	if fact.ISO == nil || *fact.ISO != 200 {
+		t.Fatalf("expected platform ISO, got %+v", fact.ISO)
+	}
+	if fact.Provenance[MetricCapturedAt] != ProvenancePlatformMetadata {
+		t.Fatalf("expected platform capture provenance, got %s", fact.Provenance[MetricCapturedAt])
+	}
+	if fact.Provenance[MetricISO] != ProvenancePlatformMetadata {
+		t.Fatalf("expected platform ISO provenance, got %s", fact.Provenance[MetricISO])
+	}
+	if fact.NormalizedFocalLengthMM == nil || *fact.NormalizedFocalLengthMM != 30 {
+		t.Fatalf("expected derived normalized focal length from platform metadata, got %+v", fact.NormalizedFocalLengthMM)
+	}
+	if fact.Provenance[MetricNormalizedFocalLength] != ProvenanceDerivedCropFactor {
+		t.Fatalf("expected derived crop-factor provenance, got %s", fact.Provenance[MetricNormalizedFocalLength])
+	}
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected RW2 embedded warning to be suppressed after platform fallback, got %+v", result.Warnings)
+	}
+	for _, event := range sink.events {
+		if event.Kind == progress.EventKindWarning {
+			t.Fatalf("expected no warning event after RW2 platform fallback, got %+v", sink.events)
+		}
+	}
+	if sink.events[len(sink.events)-1].Kind != progress.EventKindMetric {
+		t.Fatalf("expected metadata metric event, got %+v", sink.events)
+	}
+}
+
+func TestRecoverKeepsRW2WarningWhenFallbackDoesNotRecoverMetadata(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "unsupported.rw2")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-raw"))
+
+	service := NewService()
+	service.platformMetadata = func(string) embeddedValues { return embeddedValues{} }
+	sink := &recordingSink{}
+	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/unsupported.rw2"}}}, sink)
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	if len(result.Warnings) != 1 {
+		t.Fatalf("expected unresolved RW2 warning to remain visible, got %+v", result.Warnings)
+	}
+	if len(sink.events) == 0 || sink.events[0].Kind != progress.EventKindWarning {
+		t.Fatalf("expected warning event, got %+v", sink.events)
+	}
+}
+
 func TestRecoverUsesFileTimestampFallbackAndExclusions(t *testing.T) {
 	root := t.TempDir()
 	imagePath := filepath.Join(root, "gallery", "no-metadata.jpg")
@@ -234,6 +378,7 @@ func TestRecoverUsesFileTimestampFallbackAndExclusions(t *testing.T) {
 	}
 
 	service := NewService()
+	service.platformMetadata = nil
 	result, err := service.Recover(discovery.Result{Candidates: []discovery.Candidate{{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/no-metadata.jpg"}}}, &recordingSink{})
 	if err != nil {
 		t.Fatalf("expected metadata recovery success: %v", err)

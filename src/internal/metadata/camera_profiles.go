@@ -14,10 +14,11 @@ type cameraProfile struct {
 	Fallback   focalFallbackPolicy
 }
 
-var cropFactorProfiles = map[string]cameraProfile{
+var cropFactorProfiles = canonicalizeCameraProfiles(map[string]cameraProfile{
 	"canon eos digital rebel xt": {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 350d digital":     {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 400d digital":     {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
+	"canon eos 40d":              {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 450d":             {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 500d":             {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 550d":             {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
@@ -29,11 +30,23 @@ var cropFactorProfiles = map[string]cameraProfile{
 	"canon eos 77d":              {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 80d":              {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos 90d":              {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
+	"canon eos rebel t4i":        {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon eos rebel xt":         {CropFactor: floatPointer(1.6), Fallback: focalFallbackAllowActual},
 	"canon powershot g6":         {CropFactor: floatPointer(4.86), Fallback: focalFallbackAllowActual},
+	"canon powershot g10":        {CropFactor: floatPointer(4.65), Fallback: focalFallbackAllowActual},
+	"dmc-gf3":                    {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dmc-gx1":                    {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
 	"dc-g100":                    {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
 	"panasonic dc-g100":          {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
 	"lumix dc-g100":              {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-g91":                     {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-g9":                      {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-g9m2":                    {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-gx800":                   {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-gx880":                   {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"dc-gx9":                     {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"om-3":                       {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
+	"om-5":                       {CropFactor: floatPointer(2.0), Fallback: focalFallbackAllowActual},
 	"canon eos 5d":               {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
 	"canon eos 5d mark ii":       {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
 	"canon eos 5d mark iii":      {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
@@ -53,12 +66,21 @@ var cropFactorProfiles = map[string]cameraProfile{
 	"nikon d7200":                {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"nikon d7500":                {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"sony ilce-7m3":              {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
+	"sony ilce-7cm2":             {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
 	"sony ilce-7rm4":             {CropFactor: floatPointer(1.0), Fallback: focalFallbackAllowActual},
 	"sony ilce-6400":             {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"sony ilce-6600":             {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"fujifilm x-t3":              {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"fujifilm x-t4":              {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
 	"ricoh gr iii":               {CropFactor: floatPointer(1.5), Fallback: focalFallbackAllowActual},
+})
+
+func canonicalizeCameraProfiles(profiles map[string]cameraProfile) map[string]cameraProfile {
+	canonicalProfiles := make(map[string]cameraProfile, len(profiles))
+	for cameraModel, profile := range profiles {
+		canonicalProfiles[canonicalizeCameraModel(cameraModel)] = profile
+	}
+	return canonicalProfiles
 }
 
 func lookupCameraProfile(cameraModel string) (cameraProfile, bool) {

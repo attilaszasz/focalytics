@@ -1,12 +1,17 @@
 package metadata
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -23,14 +28,16 @@ var (
 )
 
 type Service struct {
-	now  func() time.Time
-	stat func(string) (os.FileInfo, error)
+	now              func() time.Time
+	stat             func(string) (os.FileInfo, error)
+	platformMetadata func(string) embeddedValues
 }
 
 func NewService() Service {
 	return Service{
-		now:  time.Now,
-		stat: os.Stat,
+		now:              time.Now,
+		stat:             os.Stat,
+		platformMetadata: readPlatformMetadata,
 	}
 }
 
@@ -71,10 +78,12 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 			fact.SidecarPath = sidecar.Path
 		}
 
-		embeddedValues, embeddedWarning := s.readEmbeddedMetadata(candidate.Path)
+		embedded, embeddedWarning := s.readEmbeddedMetadata(candidate.Path)
+		platformValues := embeddedValues{}
 		if embeddedWarning != "" {
-			result.Warnings = append(result.Warnings, Warning{Path: candidate.Path, Message: embeddedWarning})
-			publishWarning(sink, candidate.Path, embeddedWarning)
+			if s.platformMetadata != nil {
+				platformValues = s.platformMetadata(candidate.Path)
+			}
 		}
 
 		xmpValues := xmpValues{}
@@ -89,9 +98,12 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 			}
 		}
 
-		s.applyMetricTime(&fact, MetricCapturedAt, embeddedValues.CapturedAt, ProvenanceEmbedded)
+		s.applyMetricTime(&fact, MetricCapturedAt, embedded.CapturedAt, ProvenanceEmbedded)
 		if fact.CapturedAt == nil {
 			s.applyMetricTime(&fact, MetricCapturedAt, xmpValues.DateCreated, ProvenanceSidecar)
+		}
+		if fact.CapturedAt == nil {
+			s.applyMetricTime(&fact, MetricCapturedAt, platformValues.CapturedAt, ProvenancePlatformMetadata)
 		}
 		if fact.CapturedAt == nil {
 			if fileTime := s.fileTimestamp(candidate.Path); fileTime != nil {
@@ -107,31 +119,40 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricCapturedAt, Reason: "capture time unavailable after embedded, sidecar, and fallback recovery"})
 		}
 
-		s.applyMetricString(&fact, MetricCameraModel, embeddedValues.CameraModel, ProvenanceEmbedded)
+		s.applyMetricString(&fact, MetricCameraModel, embedded.CameraModel, ProvenanceEmbedded)
 		if fact.CameraModel == "" {
 			s.applyMetricString(&fact, MetricCameraModel, xmpValues.CameraModel, ProvenanceSidecar)
+		}
+		if fact.CameraModel == "" {
+			s.applyMetricString(&fact, MetricCameraModel, platformValues.CameraModel, ProvenancePlatformMetadata)
 		}
 		if fact.CameraModel == "" {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricCameraModel, Reason: "camera model unavailable"})
 		}
 
-		s.applyMetricString(&fact, MetricLensModel, embeddedValues.LensModel, ProvenanceEmbedded)
+		s.applyMetricString(&fact, MetricLensModel, embedded.LensModel, ProvenanceEmbedded)
 		if fact.LensModel == "" {
 			s.applyMetricString(&fact, MetricLensModel, xmpValues.LensModel, ProvenanceSidecar)
+		}
+		if fact.LensModel == "" {
+			s.applyMetricString(&fact, MetricLensModel, platformValues.LensModel, ProvenancePlatformMetadata)
 		}
 		if fact.LensModel == "" {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricLensModel, Reason: "lens model unavailable"})
 		}
 
-		s.applyMetricFloat(&fact, MetricFocalLengthMM, embeddedValues.FocalLengthMM, ProvenanceEmbedded)
+		s.applyMetricFloat(&fact, MetricFocalLengthMM, embedded.FocalLengthMM, ProvenanceEmbedded)
 		if fact.FocalLengthMM == nil {
 			s.applyMetricFloat(&fact, MetricFocalLengthMM, xmpValues.FocalLengthMM, ProvenanceSidecar)
+		}
+		if fact.FocalLengthMM == nil {
+			s.applyMetricFloat(&fact, MetricFocalLengthMM, platformValues.FocalLengthMM, ProvenancePlatformMetadata)
 		}
 		if fact.FocalLengthMM == nil {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricFocalLengthMM, Reason: "focal length unavailable"})
 		}
 
-		s.applyMetricFloat(&fact, MetricNormalizedFocalLength, embeddedValues.NormalizedFocalLengthMM, ProvenanceEmbedded)
+		s.applyMetricFloat(&fact, MetricNormalizedFocalLength, embedded.NormalizedFocalLengthMM, ProvenanceEmbedded)
 		if fact.NormalizedFocalLengthMM == nil {
 			s.applyMetricFloat(&fact, MetricNormalizedFocalLength, xmpValues.NormalizedFocalLengthMM, ProvenanceSidecar)
 		}
@@ -148,28 +169,42 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricNormalizedFocalLength, Reason: "normalized focal length unavailable"})
 		}
 
-		s.applyMetricFloat(&fact, MetricApertureF, embeddedValues.ApertureF, ProvenanceEmbedded)
+		s.applyMetricFloat(&fact, MetricApertureF, embedded.ApertureF, ProvenanceEmbedded)
 		if fact.ApertureF == nil {
 			s.applyMetricFloat(&fact, MetricApertureF, xmpValues.ApertureF, ProvenanceSidecar)
+		}
+		if fact.ApertureF == nil {
+			s.applyMetricFloat(&fact, MetricApertureF, platformValues.ApertureF, ProvenancePlatformMetadata)
 		}
 		if fact.ApertureF == nil {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricApertureF, Reason: "aperture unavailable"})
 		}
 
-		s.applyMetricFloat(&fact, MetricShutterSeconds, embeddedValues.ShutterSeconds, ProvenanceEmbedded)
+		s.applyMetricFloat(&fact, MetricShutterSeconds, embedded.ShutterSeconds, ProvenanceEmbedded)
 		if fact.ShutterSeconds == nil {
 			s.applyMetricFloat(&fact, MetricShutterSeconds, xmpValues.ShutterSeconds, ProvenanceSidecar)
+		}
+		if fact.ShutterSeconds == nil {
+			s.applyMetricFloat(&fact, MetricShutterSeconds, platformValues.ShutterSeconds, ProvenancePlatformMetadata)
 		}
 		if fact.ShutterSeconds == nil {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricShutterSeconds, Reason: "shutter speed unavailable"})
 		}
 
-		s.applyMetricInt(&fact, MetricISO, embeddedValues.ISO, ProvenanceEmbedded)
+		s.applyMetricInt(&fact, MetricISO, embedded.ISO, ProvenanceEmbedded)
 		if fact.ISO == nil {
 			s.applyMetricInt(&fact, MetricISO, xmpValues.ISO, ProvenanceSidecar)
 		}
 		if fact.ISO == nil {
+			s.applyMetricInt(&fact, MetricISO, platformValues.ISO, ProvenancePlatformMetadata)
+		}
+		if fact.ISO == nil {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricISO, Reason: "ISO unavailable"})
+		}
+
+		if embeddedWarning != "" && shouldPublishEmbeddedWarning(candidate.Path, embeddedWarning, fact) {
+			result.Warnings = append(result.Warnings, Warning{Path: candidate.Path, Message: embeddedWarning})
+			publishWarning(sink, candidate.Path, embeddedWarning)
 		}
 
 		result.Facts = append(result.Facts, fact)
@@ -209,7 +244,7 @@ func (s Service) readEmbeddedMetadata(path string) (embeddedValues, string) {
 		_ = file.Close()
 	}()
 
-	decoded, err := exif.Decode(file)
+	decoded, err := decodeEmbeddedEXIF(file, path)
 	if err != nil {
 		return embeddedValues{}, fmt.Sprintf("embedded metadata unavailable: %v", err)
 	}
@@ -228,6 +263,190 @@ func (s Service) readEmbeddedMetadata(path string) (embeddedValues, string) {
 	values.ISO = exifInt(decoded, exif.ISOSpeedRatings)
 
 	return values, ""
+}
+
+func decodeEmbeddedEXIF(file *os.File, path string) (*exif.Exif, error) {
+	decoded, err := exif.Decode(file)
+	if err == nil {
+		return decoded, nil
+	}
+
+	header, headerErr := readHeader(file, 4)
+	if headerErr != nil {
+		return nil, err
+	}
+	if !shouldRetryWithPatchedTIFF(path, header) {
+		return nil, err
+	}
+
+	patched, patchedErr := readPatchedTIFFBuffer(file)
+	if patchedErr != nil {
+		return nil, fmt.Errorf("%v; patched TIFF retry unavailable: %w", err, patchedErr)
+	}
+
+	decoded, patchedErr = exif.Decode(bytes.NewReader(patched))
+	if patchedErr != nil {
+		return nil, fmt.Errorf("%v; patched TIFF retry failed: %w", err, patchedErr)
+	}
+
+	return decoded, nil
+}
+
+func readHeader(file *os.File, size int) ([]byte, error) {
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
+	header := make([]byte, size)
+	n, err := io.ReadFull(file, header)
+	if err != nil {
+		return nil, err
+	}
+	return header[:n], nil
+}
+
+func shouldRetryWithPatchedTIFF(path string, header []byte) bool {
+	if len(header) < 4 {
+		return false
+	}
+	extension := strings.ToLower(filepath.Ext(path))
+	var magic uint16
+	switch {
+	case header[0] == 'I' && header[1] == 'I':
+		magic = binary.LittleEndian.Uint16(header[2:4])
+	case header[0] == 'M' && header[1] == 'M':
+		magic = binary.BigEndian.Uint16(header[2:4])
+	default:
+		return false
+	}
+
+	switch extension {
+	case ".orf":
+		return magic == 0x4f52 || magic == 0x5352
+	case ".rw2":
+		return magic == 0x0055
+	default:
+		return false
+	}
+}
+
+func readPatchedTIFFBuffer(file *os.File) ([]byte, error) {
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	if len(content) < 4 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	patched := make([]byte, len(content))
+	copy(patched, content)
+	if patched[0] == 'I' && patched[1] == 'I' {
+		binary.LittleEndian.PutUint16(patched[2:4], 0x002a)
+		return patched, nil
+	}
+	if patched[0] == 'M' && patched[1] == 'M' {
+		binary.BigEndian.PutUint16(patched[2:4], 0x002a)
+		return patched, nil
+	}
+	return nil, fmt.Errorf("unsupported TIFF byte order")
+}
+
+func readPlatformMetadata(path string) embeddedValues {
+	if runtime.GOOS != "darwin" {
+		return embeddedValues{}
+	}
+
+	output, err := exec.Command(
+		"mdls",
+		"-name", "kMDItemAcquisitionModel",
+		"-name", "kMDItemLensModel",
+		"-name", "kMDItemFocalLength",
+		"-name", "kMDItemFNumber",
+		"-name", "kMDItemExposureTimeSeconds",
+		"-name", "kMDItemISOSpeed",
+		"-name", "kMDItemContentCreationDate",
+		path,
+	).Output()
+	if err != nil {
+		return embeddedValues{}
+	}
+
+	values := parsePlatformMetadataValues(string(output))
+	return embeddedValues{
+		CapturedAt:     parsePlatformTime(values["kMDItemContentCreationDate"]),
+		CameraModel:    values["kMDItemAcquisitionModel"],
+		LensModel:      values["kMDItemLensModel"],
+		FocalLengthMM:  parseFloatPointer(values["kMDItemFocalLength"]),
+		ApertureF:      parseFloatPointer(values["kMDItemFNumber"]),
+		ShutterSeconds: parseFloatPointer(values["kMDItemExposureTimeSeconds"]),
+		ISO:            parseIntPointer(values["kMDItemISOSpeed"]),
+	}
+}
+
+func parsePlatformMetadataValues(output string) map[string]string {
+	values := make(map[string]string)
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		if key == "" || value == "" || value == "(null)" {
+			continue
+		}
+		values[key] = strings.Trim(strings.TrimSpace(value), "\"")
+	}
+	return values
+}
+
+func parsePlatformTime(value string) *time.Time {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	parsed, err := time.Parse("2006-01-02 15:04:05 -0700", trimmed)
+	if err != nil {
+		return nil
+	}
+	parsed = parsed.UTC()
+	return &parsed
+}
+
+func shouldPublishEmbeddedWarning(path, message string, fact Fact) bool {
+	if !isSuppressibleEmbeddedWarning(path, message) {
+		return true
+	}
+	return !hasRecoveredMetadataFallback(fact)
+}
+
+func isSuppressibleEmbeddedWarning(path, message string) bool {
+	if !strings.HasPrefix(message, "embedded metadata unavailable:") {
+		return false
+	}
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".crw", ".rw2":
+		return true
+	default:
+		return false
+	}
+}
+
+func hasRecoveredMetadataFallback(fact Fact) bool {
+	for _, metric := range []Metric{MetricCameraModel, MetricLensModel, MetricFocalLengthMM, MetricApertureF, MetricShutterSeconds, MetricISO} {
+		source, ok := fact.Provenance[metric]
+		if !ok || source == ProvenanceEmbedded {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func exifString(decoded *exif.Exif, field exif.FieldName) string {

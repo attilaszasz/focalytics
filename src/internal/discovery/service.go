@@ -18,6 +18,7 @@ var supportedImageExtensions = map[string]struct{}{
 	".png":  {},
 	".tif":  {},
 	".tiff": {},
+	".crw":  {},
 	".dng":  {},
 	".arw":  {},
 	".cr2":  {},
@@ -25,6 +26,7 @@ var supportedImageExtensions = map[string]struct{}{
 	".nef":  {},
 	".orf":  {},
 	".raf":  {},
+	".rw2":  {},
 }
 
 type Service struct {

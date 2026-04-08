@@ -64,6 +64,29 @@ func TestDiscoverReturnsDeterministicCandidates(t *testing.T) {
 	}
 }
 
+func TestDiscoverSupportsLegacyAndPanasonicRAWExtensions(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "legacy", "sample.CRW"))
+	writeFile(t, filepath.Join(root, "panasonic", "sample.RW2"))
+
+	result, err := NewService().Discover(root, &recordingSink{}, &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("expected discovery success: %v", err)
+	}
+
+	got := make([]string, 0, len(result.Candidates))
+	for _, candidate := range result.Candidates {
+		got = append(got, string(candidate.Kind)+":"+candidate.RelativePath)
+	}
+	want := []string{
+		"image:legacy/sample.CRW",
+		"image:panasonic/sample.RW2",
+	}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("unexpected candidates: got %v want %v", got, want)
+	}
+}
+
 func TestDiscoverSkipsSymlinkEntries(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "photo.jpg"))

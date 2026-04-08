@@ -20,6 +20,7 @@ type ProvenanceSource string
 const (
 	ProvenanceEmbedded                 ProvenanceSource = "embedded"
 	ProvenanceSidecar                  ProvenanceSource = "sidecar"
+	ProvenancePlatformMetadata         ProvenanceSource = "platform_metadata"
 	ProvenanceFileTimestamp            ProvenanceSource = "file_timestamp"
 	ProvenanceDirectoryHint            ProvenanceSource = "directory_hint"
 	ProvenanceDerivedCropFactor        ProvenanceSource = "derived_crop_factor"

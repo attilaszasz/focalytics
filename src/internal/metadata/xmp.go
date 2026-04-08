@@ -64,6 +64,9 @@ func parseXMP(path string) (xmpValues, error) {
 				continue
 			}
 			key := stack[len(stack)-1]
+			if key == "li" && len(stack) >= 3 && isXMPSequenceContainer(stack[len(stack)-2]) {
+				key = stack[len(stack)-3]
+			}
 			if _, exists := values[key]; !exists {
 				values[key] = value
 			}
@@ -85,6 +88,15 @@ func parseXMP(path string) (xmpValues, error) {
 	result.ISO = parseIntPointer(firstNonEmpty(values["ISO"], values["ISOSpeedRatings"]))
 
 	return result, nil
+}
+
+func isXMPSequenceContainer(name string) bool {
+	switch name {
+	case "Seq", "Bag", "Alt":
+		return true
+	default:
+		return false
+	}
 }
 
 func firstNonEmpty(values ...string) string {
