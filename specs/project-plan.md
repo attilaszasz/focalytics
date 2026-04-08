@@ -7,7 +7,7 @@ dod_source: ""
 
 # Project Implementation Plan
 
-> Product: focalytics | Created: 2026-04-05 | Status: Draft | Total Epics: 7 (P1: 6, P2: 1, P3: 0) | Waves: 6
+> Product: focalytics | Created: 2026-04-05 | Status: Draft | Total Epics: 8 (P1: 6, P2: 2, P3: 0) | Waves: 7
 
 ## Epic Checklist
 
@@ -48,6 +48,12 @@ dod_source: ""
 
 - [X] E007 [P1] [PRODUCT] {PRD:CAP-001}{SAD:ADR-001} Interactive Progress Display — replace per-file text flood with Bubble Tea TUI showing stage spinners, live counters, and non-interactive fallback.
 
+### Wave 7 — Selective Analysis
+
+> Add an opt-in device filter so photographers can exclude phone-made images without changing the default one-command workflow.
+
+- [ ] E008 [P2] [PRODUCT] {PRD:CAP-005,CAP-006}{SAD:ADR-003} Ignore Phone Photos — add an optional run parameter that excludes phone-made images from derived insights while reporting the filtered scope explicitly.
+
 ## Dependency Diagram
 
 ```mermaid
@@ -59,9 +65,11 @@ graph LR
     M3 -->|E004<br>Aggregate Insight Metrics| M4([Insight Model Ready])
     M4 -->|E005<br>Render Offline Report| M5([MVP Ready])
     M5 -->|E007<br>Interactive Progress Display| M8([Progress UX Ready])
+  M8 -->|E008<br>Ignore Phone Photos| M9([Selective Analysis Ready])
     M5 --> M7([Project Increment Ready])
     M6 --> M7
     M8 --> M7
+  M9 --> M7
 ```
 
 ## Execution Wave Summary
@@ -74,6 +82,7 @@ graph LR
 | 4 | E004 | No | Aggregate structures depend on normalized facts and exclusion signals from E003. |
 | 5 | E005 | No | Report rendering depends on stable aggregate models and exclusion counters from E004. |
 | 6 | E007 | No | Progress UX replaces text-based reporting across all pipeline stages after the full pipeline is stable. |
+| 7 | E008 | No | Selective analysis depends on stable device classification, exclusion semantics, and the final interactive/non-interactive command contract. |
 
 ## Parallel Execution Guidance
 
@@ -87,6 +96,7 @@ graph LR
 - E003 and E004 share ownership of fact and aggregate schemas; if exclusion semantics drift, the report layer will misstate data quality.
 - E004 and E005 share the report model boundary; chart bucket names and exclusion counters must stabilize before HTML templates are finalized.
 - E007 replaces the progress sink wiring in the CLI entry point and removes stdout writes from discovery and render; existing integration tests that assert on per-file stdout output will need updating.
+- E008 depends on consistent phone-device classification and filtered-count accounting across metadata recovery, aggregation, report rendering, and terminal completion output; mismatched totals will undermine trust in the filtered report.
 
 ### Shared Resource Conflicts
 
@@ -94,6 +104,7 @@ graph LR
 - Release metadata in E006 must not invent artifact names or checksum layouts that diverge from the actual build outputs produced by the core runtime.
 - Aggregate model changes in E004 should land behind explicit shared types to avoid hidden coupling with E005 templates.
 - E007 introduces Bubble Tea as a new runtime dependency; the progress Sink interface must remain stable so non-interactive runs continue to work without the TUI.
+- E008 adds an opt-in filter contract; the default no-flag behavior, filtered totals, and report annotations must stay aligned so users can compare filtered and unfiltered runs safely.
 
 ## Epic Details
 
@@ -267,6 +278,30 @@ graph LR
   - **Constraints**: Immutable release assets, checksum publication, cross-platform parity
   - **Pipeline hints**: skip_clarify, skip_checklist, lightweight
 
+### E008 — Ignore Phone Photos
+
+- **Category**: PRODUCT
+- **Priority**: P2
+- **Source**: {PRD:CAP-005,CAP-006}{SAD:ADR-003}
+- **Scope**: Add an opt-in run parameter that excludes phone-made images from archive-level gear and technical insights while keeping the default run unchanged. The epic must classify phone-origin captures from metadata or sidecar evidence, remove them from derived aggregates when requested, and disclose the filtered scope in generated output so users can trust what changed.
+- **Actors**: Photographer
+- **Key entities**: Run filter, device classification, filtered archive summary, exclusion note
+- **Depends on**: E007
+- **Dependency contracts**: Requires provenance-aware device metadata from E003, aggregate and exclusion surfaces from E004-E005, and the stable CLI/TUI output contract from E007 so filtered runs stay scriptable and understandable.
+- **Depended on by**: None
+- **Produces (shared)**: Phone-filter CLI contract, filtered aggregation selector, report filter disclosure
+- **Constraints**: Must keep the no-flag path unchanged, avoid false certainty when device type is ambiguous, and surface filtered counts explicitly wherever totals could otherwise be misread.
+- **Acceptance criteria**:
+  - [ ] An optional run parameter excludes images identified as phone-made from gear and technical aggregates without changing default behavior when the parameter is absent.
+  - [ ] Device classification uses existing metadata and sidecar evidence conservatively, leaving ambiguous files in scope rather than silently over-filtering them.
+  - [ ] Generated report output and terminal completion feedback disclose how many images were filtered by the phone option and which metrics were affected.
+- **Specify input**:
+  - **Description**: Add an opt-in analysis filter that ignores phone-origin captures while preserving trustworthy reporting of the narrowed archive scope.
+  - **Actors**: Photographer
+  - **Key entities**: Run filter, device classification, filtered archive summary, exclusion note
+  - **Depends on artifacts**: E003 metadata facts, E004 aggregate model, E005 report contract, E007 command and progress contract
+  - **Constraints**: Zero-config default unchanged, conservative classification, explicit disclosure of filtered scope
+
 ## Coverage Validation
 
 ### PRD Capability Coverage
@@ -277,8 +312,8 @@ graph LR
 | CAP-002 | E003 | Covered | Metadata recovery, sidecars, and fallbacks are delivered together. |
 | CAP-003 | E005 | Covered | Self-contained report generation is the final MVP increment. |
 | CAP-004 | E004, E005 | Covered | Timeline and activity insights are aggregated first, then rendered. |
-| CAP-005 | E004, E005 | Covered | Gear and technical insights share the same aggregate and rendering flow. |
-| CAP-006 | E003, E004, E005 | Covered | Data quality transparency is preserved from parsing through rendering. |
+| CAP-005 | E004, E005, E008 | Covered | Core gear and technical insights ship in E004-E005; E008 adds opt-in phone exclusion for cleaner comparisons. |
+| CAP-006 | E003, E004, E005, E008 | Covered | Data quality transparency now also covers explicit phone-filter exclusions in filtered runs. |
 | CAP-007 | E006 | Covered | Installation and release-channel accessibility are handled by delivery automation. |
 
 ### SAD ADR Coverage
@@ -287,7 +322,7 @@ graph LR
 |--------------|-------|--------|-------|
 | ADR-001 | E001, E002, E007 | Covered | The modular monolith is established in E001, exercised by discovery in E002, and the Progress UI module is delivered in E007. |
 | ADR-002 | E001, E002, E004 | Covered | Stateless-per-run execution is reflected in core runtime and aggregation design. |
-| ADR-003 | E003, E004, E005 | Covered | Layered recovery and explicit exclusions are implemented end to end. |
+| ADR-003 | E003, E004, E005, E008 | Covered | Layered recovery and explicit exclusions are implemented end to end and extended to opt-in phone filtering. |
 | ADR-004 | E005 | Covered | Self-contained static report generation is a dedicated epic. |
 | ADR-005 | E006 | Covered | Immutable release artifacts anchor the delivery automation epic. |
 
@@ -307,30 +342,32 @@ graph LR
 
 | Shared Data Entity | Introduced by | Consumed by |
 |--------------------|---------------|-------------|
-| Scan request | E001 | E002, E003, E004, E005 |
+| Scan request | E001 | E002, E003, E004, E005, E008 |
 | File candidate | E002 | E003 |
-| Metadata fact | E003 | E004 |
-| Exclusion summary | E003 | E004, E005 |
-| Archive summary | E004 | E005 |
+| Metadata fact | E003 | E004, E008 |
+| Device classification | E003 | E008 |
+| Exclusion summary | E003 | E004, E005, E008 |
+| Archive summary | E004 | E005, E008 |
 | Progress event | E001 | E002, E003, E007 |
 
 ### API Surfaces
 
 | API Surface | Introduced by | Consumed by |
 |-------------|---------------|-------------|
-| CLI command contract | E001 | E002, E003, E004, E005, E006, E007 |
+| CLI command contract | E001 | E002, E003, E004, E005, E006, E007, E008 |
 | Exit-code contract | E001 | E002, E003, E005, E006 |
-| Report output contract | E005 | E006 |
+| Report output contract | E005 | E006, E008 |
 | Progress sink contract | E001 | E002, E003, E007 |
 
 ### Libraries/Modules
 
 | Library/Module | Introduced by | Consumed by |
 |----------------|---------------|-------------|
-| Command runtime package | E001 | E002, E003, E004, E005, E006, E007 |
+| Command runtime package | E001 | E002, E003, E004, E005, E006, E007, E008 |
 | Discovery package | E002 | E003 |
-| Metadata recovery package | E003 | E004 |
-| Aggregation package | E004 | E005 |
+| Metadata recovery package | E003 | E004, E008 |
+| Aggregation package | E004 | E005, E008 |
+| Report rendering package | E005 | E008 |
 | Release automation config | E006 | E006 |
 | TUI progress sink | E007 | E007 |
 
