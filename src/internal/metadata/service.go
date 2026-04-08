@@ -129,6 +129,7 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 		if fact.CameraModel == "" {
 			fact.Exclusions = append(fact.Exclusions, Exclusion{Metric: MetricCameraModel, Reason: "camera model unavailable"})
 		}
+		s.classifyDevice(&fact)
 
 		s.applyMetricString(&fact, MetricLensModel, embedded.LensModel, ProvenanceEmbedded)
 		if fact.LensModel == "" {
@@ -215,6 +216,18 @@ func (s Service) Recover(discoveryResult discovery.Result, sink progress.Sink) (
 	}
 
 	return result, nil
+}
+
+func (s Service) classifyDevice(fact *Fact) {
+	if fact == nil {
+		return
+	}
+	fact.DeviceClass = classifyDevice(fact.CameraModel)
+	if fact.DeviceClass == DeviceClassUnknown {
+		fact.DeviceClassSource = ""
+		return
+	}
+	fact.DeviceClassSource = fact.Provenance[MetricCameraModel]
 }
 
 func shouldPublishMetric(processed, total int) bool {

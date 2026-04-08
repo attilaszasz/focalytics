@@ -38,3 +38,13 @@ func TestTUIModelRetainsRecentWarnings(t *testing.T) {
 		}
 	}
 }
+
+func TestTUIModelShowsCompletionNote(t *testing.T) {
+	model := NewTUIModel(nil)
+	model.applyEvent(Event{Kind: EventKindStatus, Message: "Phone filter active: excluded 2 phone-made photos from gear and technical insights; timeline and total photos still reflect the full archive."})
+
+	view := model.View()
+	if !strings.Contains(view, "Phone filter active: excluded 2 phone-made photos") {
+		t.Fatalf("expected completion note in view %q", view)
+	}
+}

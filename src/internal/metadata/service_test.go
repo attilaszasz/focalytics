@@ -73,6 +73,9 @@ func TestRecoverUsesSidecarFallbacks(t *testing.T) {
 	if fact.CapturedAt == nil || fact.Provenance[MetricCapturedAt] != ProvenanceSidecar {
 		t.Fatalf("expected sidecar capture time provenance, got %+v", fact.Provenance)
 	}
+	if fact.DeviceClass != DeviceClassNonPhone {
+		t.Fatalf("expected non-phone classification, got %s", fact.DeviceClass)
+	}
 	if fact.CameraModel != "Test Camera" {
 		t.Fatalf("unexpected camera model: %s", fact.CameraModel)
 	}
@@ -199,6 +202,9 @@ func TestRecoverSkipsActualFocalFallbackForPhoneWithoutEquivalent(t *testing.T) 
 		t.Fatalf("expected metadata recovery success: %v", err)
 	}
 	fact := result.Facts[0]
+	if fact.DeviceClass != DeviceClassPhone {
+		t.Fatalf("expected phone classification, got %s", fact.DeviceClass)
+	}
 	if fact.NormalizedFocalLengthMM != nil {
 		t.Fatalf("expected no normalized focal fallback for phone, got %+v", fact.NormalizedFocalLengthMM)
 	}
@@ -384,6 +390,9 @@ func TestRecoverUsesFileTimestampFallbackAndExclusions(t *testing.T) {
 		t.Fatalf("expected metadata recovery success: %v", err)
 	}
 	fact := result.Facts[0]
+	if fact.DeviceClass != DeviceClassUnknown {
+		t.Fatalf("expected unknown device classification, got %s", fact.DeviceClass)
+	}
 	if fact.CapturedAt == nil || !fact.CapturedAt.Equal(fallbackTime) {
 		t.Fatalf("expected file timestamp fallback, got %+v", fact.CapturedAt)
 	}
@@ -392,6 +401,25 @@ func TestRecoverUsesFileTimestampFallbackAndExclusions(t *testing.T) {
 	}
 	if !hasExclusion(fact, MetricCameraModel) || !hasExclusion(fact, MetricISO) {
 		t.Fatalf("expected exclusions for missing metrics, got %+v", fact.Exclusions)
+	}
+}
+
+func TestRecoverDoesNotClassifyPhoneFromSoftwareOnlySidecar(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "gallery", "export.jpg")
+	sidecarPath := filepath.Join(root, "gallery", "export.xmp")
+	writeFixtureFile(t, imagePath, []byte("not-a-real-jpeg"))
+	writeFixtureFile(t, sidecarPath, []byte(`<?xpacket begin=""?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:CreatorTool="iPhone Export Pipeline"/></rdf:RDF></x:xmpmeta>`))
+
+	result, err := NewService().Recover(discovery.Result{Candidates: []discovery.Candidate{
+		{Kind: discovery.CandidateKindImage, Path: imagePath, RelativePath: "gallery/export.jpg"},
+		{Kind: discovery.CandidateKindSidecar, Path: sidecarPath, RelativePath: "gallery/export.xmp"},
+	}}, &recordingSink{})
+	if err != nil {
+		t.Fatalf("expected metadata recovery success: %v", err)
+	}
+	if result.Facts[0].DeviceClass != DeviceClassUnknown {
+		t.Fatalf("expected unknown device classification from software-only sidecar, got %s", result.Facts[0].DeviceClass)
 	}
 }
 

@@ -26,7 +26,8 @@ type IOStreams struct {
 }
 
 func NewRootCommand(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStreams) *cobra.Command {
-	runHandler := newRunHandler(runner, exitPolicy, streams)
+	var ignorePhonePhotos bool
+	runHandler := newRunHandler(runner, exitPolicy, streams, &ignorePhonePhotos)
 
 	command := &cobra.Command{
 		Use:           "focalytics [archive-root]",
@@ -35,6 +36,8 @@ func NewRootCommand(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStre
 		SilenceUsage:  true,
 		RunE:          runHandler,
 	}
+
+	configureIgnorePhonePhotosFlag(command, &ignorePhonePhotos)
 
 	command.AddCommand(NewRunCommand(runner, exitPolicy, streams))
 	command.SetOut(streams.Out)
@@ -93,7 +96,13 @@ func newRunner(sink progress.Sink, stderr io.Writer, exitPolicy app.ExitPolicy) 
 }
 
 func normalizeArgs(args []string) []string {
-	if len(args) > 0 && args[0] != "run" && args[0] != "help" && args[0] != "completion" && args[0][0] != '-' {
+	for _, arg := range args {
+		if arg == "run" || arg == "help" || arg == "completion" {
+			return args
+		}
+		if len(arg) > 0 && arg[0] == '-' {
+			continue
+		}
 		return append([]string{"run"}, args...)
 	}
 	return args

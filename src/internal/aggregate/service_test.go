@@ -18,8 +18,8 @@ func TestAggregateTimelineSummariesDeterministic(t *testing.T) {
 		{RelativePath: "c.jpg", CapturedAt: timePointer(time.Date(2020, time.January, 2, 14, 0, 0, 0, time.UTC))},
 	}}
 
-	first := service.Aggregate(metadataResult)
-	second := service.Aggregate(metadataResult)
+	first := service.Aggregate(metadataResult, false)
+	second := service.Aggregate(metadataResult, false)
 
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("expected deterministic aggregate output")
@@ -67,7 +67,7 @@ func TestAggregateGearAndTechnicalSummaries(t *testing.T) {
 		},
 	}}
 
-	result := service.Aggregate(metadataResult)
+	result := service.Aggregate(metadataResult, false)
 	if len(result.Gear.Cameras) != 2 || result.Gear.Cameras[0].Label != "Camera A" || result.Gear.Cameras[0].Count != 2 {
 		t.Fatalf("unexpected camera ranking: %+v", result.Gear.Cameras)
 	}
@@ -109,7 +109,7 @@ func TestAggregateWarningsAndExclusions(t *testing.T) {
 		Warnings: []metadata.Warning{{Path: "a.jpg", Message: "warn a"}, {Path: "b.jpg", Message: "warn b"}},
 	}
 
-	result := service.Aggregate(metadataResult)
+	result := service.Aggregate(metadataResult, false)
 	if result.WarningsTotal != 2 {
 		t.Fatalf("expected warnings total 2, got %d", result.WarningsTotal)
 	}
@@ -121,6 +121,30 @@ func TestAggregateWarningsAndExclusions(t *testing.T) {
 	}
 	if result.Exclusions[0].Metric != metadata.MetricCameraModel || result.Exclusions[0].Count != 2 {
 		t.Fatalf("unexpected exclusions: %+v", result.Exclusions)
+	}
+}
+
+func TestAggregateFiltersPhoneFactsFromAffectedAnalytics(t *testing.T) {
+	service := NewService()
+	first := time.Date(2020, time.January, 2, 10, 0, 0, 0, time.UTC)
+	last := time.Date(2020, time.January, 3, 10, 0, 0, 0, time.UTC)
+	metadataResult := metadata.Result{Facts: []metadata.Fact{
+		{CapturedAt: &first, CameraModel: "iPhone 15 Pro", LensModel: "iPhone Lens", NormalizedFocalLengthMM: floatPointer(24), ISO: intPointer(100), DeviceClass: metadata.DeviceClassPhone},
+		{CapturedAt: &last, CameraModel: "Canon EOS 5D Mark IV", LensModel: "EF50mm", NormalizedFocalLengthMM: floatPointer(50), ISO: intPointer(200), DeviceClass: metadata.DeviceClassNonPhone},
+	}}
+
+	result := service.Aggregate(metadataResult, true)
+	if !result.Filter.Active || result.Filter.FilteredPhotos != 1 {
+		t.Fatalf("unexpected filter summary: %+v", result.Filter)
+	}
+	if result.Totals.Facts != 2 {
+		t.Fatalf("expected full-archive totals to remain 2, got %d", result.Totals.Facts)
+	}
+	if len(result.Timeline.Years) != 1 || result.Timeline.Years[0].Count != 2 {
+		t.Fatalf("expected timeline to remain whole-archive, got %+v", result.Timeline.Years)
+	}
+	if len(result.Gear.Cameras) != 1 || result.Gear.Cameras[0].Label != "Canon EOS 5D Mark IV" {
+		t.Fatalf("expected filtered camera ranking, got %+v", result.Gear.Cameras)
 	}
 }
 

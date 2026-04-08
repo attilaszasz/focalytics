@@ -12,13 +12,16 @@ import (
 )
 
 func NewRunCommand(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStreams) *cobra.Command {
+	var ignorePhonePhotos bool
 	command := &cobra.Command{
 		Use:           "run [archive-root]",
 		Short:         "Run one archive scan",
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		RunE:          newRunHandler(runner, exitPolicy, streams),
+		RunE:          newRunHandler(runner, exitPolicy, streams, &ignorePhonePhotos),
 	}
+
+	configureIgnorePhonePhotosFlag(command, &ignorePhonePhotos)
 
 	command.SetOut(streams.Out)
 	command.SetErr(streams.ErrOut)
@@ -26,9 +29,13 @@ func NewRunCommand(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStrea
 	return command
 }
 
-func newRunHandler(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStreams) func(*cobra.Command, []string) error {
+func configureIgnorePhonePhotosFlag(command *cobra.Command, target *bool) {
+	command.Flags().BoolVar(target, "ignore-phone-photos", false, "Exclude phone-made photos from gear and technical analytics")
+}
+
+func newRunHandler(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStreams, ignorePhonePhotos *bool) func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
-		request, err := buildScanRequest(args, streams)
+		request, err := buildScanRequest(args, streams, ignorePhonePhotos != nil && *ignorePhonePhotos)
 		if err != nil {
 			return app.InvalidInputError(err)
 		}
@@ -41,12 +48,15 @@ func newRunHandler(runner app.Runner, exitPolicy app.ExitPolicy, streams IOStrea
 		if result.ExitCode != exitPolicy.Success {
 			return app.CommandErrorFromCode(result.ExitCode, fmt.Errorf("command exited with code %d", result.ExitCode))
 		}
+		if !request.Interactive && result.CompletionNote != "" && request.Stderr != nil {
+			_, _ = fmt.Fprintln(request.Stderr, result.CompletionNote)
+		}
 
 		return nil
 	}
 }
 
-func buildScanRequest(args []string, streams IOStreams) (app.ScanRequest, error) {
+func buildScanRequest(args []string, streams IOStreams, ignorePhonePhotos bool) (app.ScanRequest, error) {
 	if len(args) != 1 {
 		return app.ScanRequest{}, fmt.Errorf("exactly one archive root path is required")
 	}
@@ -61,9 +71,10 @@ func buildScanRequest(args []string, streams IOStreams) (app.ScanRequest, error)
 	}
 
 	return app.ScanRequest{
-		ArchiveRoot: archiveRoot,
-		Interactive: streams.Interactive,
-		Stdout:      streams.Out,
-		Stderr:      streams.ErrOut,
+		ArchiveRoot:       archiveRoot,
+		IgnorePhonePhotos: ignorePhonePhotos,
+		Interactive:       streams.Interactive,
+		Stdout:            streams.Out,
+		Stderr:            streams.ErrOut,
 	}, nil
 }

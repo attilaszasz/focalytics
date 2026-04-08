@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/attila/focalytics/internal/aggregate"
 	"github.com/attila/focalytics/internal/app"
 	"github.com/attila/focalytics/internal/progress"
 )
@@ -49,7 +50,17 @@ func (r *Runner) Run(ctx context.Context, request app.ScanRequest) (app.RunResul
 		_ = r.progress.Publish(progress.Event{Kind: progress.EventKindStageEnd, Stage: stage.Name(), Message: "stage complete", CurrentPath: request.ArchiveRoot})
 	}
 
+	completionNote := ""
+	if artifact, ok := runContext.Artifact(app.ArtifactAggregateResult); ok {
+		if aggregateResult, ok := artifact.(aggregate.Result); ok {
+			completionNote = aggregateResult.Filter.CompletionNote()
+			if completionNote != "" {
+				_ = r.progress.Publish(progress.Event{Kind: progress.EventKindStatus, Message: completionNote, CurrentPath: request.ArchiveRoot})
+			}
+		}
+	}
+
 	_ = r.progress.Publish(progress.Event{Kind: progress.EventKindStatus, Message: "run complete", CurrentPath: request.ArchiveRoot})
 
-	return app.RunResult{ExitCode: r.exitPolicy.Success, StageResults: results}, nil
+	return app.RunResult{ExitCode: r.exitPolicy.Success, StageResults: results, CompletionNote: completionNote}, nil
 }

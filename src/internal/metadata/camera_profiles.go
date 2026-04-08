@@ -112,6 +112,17 @@ func isPhoneModel(canonicalModel string) bool {
 	return false
 }
 
+func classifyDevice(cameraModel string) DeviceClass {
+	canonical := canonicalizeCameraModel(cameraModel)
+	if canonical == "" {
+		return DeviceClassUnknown
+	}
+	if isPhoneModel(canonical) {
+		return DeviceClassPhone
+	}
+	return DeviceClassNonPhone
+}
+
 func floatPointer(value float64) *float64 {
 	copy := value
 	return &copy

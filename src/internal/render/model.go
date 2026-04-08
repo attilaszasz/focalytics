@@ -27,6 +27,7 @@ type OverviewSection struct {
 	TopCamera   []string
 	TopLens     []string
 	TopFocal    []string
+	ScopeNote   string
 }
 
 type TimelineSection struct {
@@ -38,10 +39,12 @@ type TimelineSection struct {
 }
 
 type MetricSection struct {
-	Title    string
-	Subtitle string
-	Rows     []BarRow
-	Note     *SectionNote
+	Title        string
+	Subtitle     string
+	Rows         []BarRow
+	Note         *SectionNote
+	ScopeNote    string
+	EmptyMessage string
 }
 
 type BarRow struct {

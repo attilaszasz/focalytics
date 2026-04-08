@@ -38,8 +38,9 @@ type StageResult struct {
 }
 
 type RunResult struct {
-	ExitCode     int
-	StageResults []StageResult
+	ExitCode       int
+	StageResults   []StageResult
+	CompletionNote string
 }
 
 type Runner interface {

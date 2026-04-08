@@ -177,3 +177,4 @@ Context that downstream architecture design or governance work must preserve.
 - focalytics is a project-level product initiative aimed first at photography enthusiasts and hobbyists with large local archives.
 - The canonical product promise is privacy-first, offline archive insight from a single local CLI invocation.
 - Initial release validation should prioritize successful report generation on real archives and perceived usefulness of the generated report.
+- Optional analysis filters may narrow specific insight sections only when explicitly enabled and when the generated output discloses the changed scope clearly.

@@ -135,6 +135,22 @@ func TestBuildModelLimitsTopHeroListsToAvailableLabels(t *testing.T) {
 	}
 }
 
+func TestBuildModelAddsPhoneFilterScopeNotes(t *testing.T) {
+	summary := renderFixtureSummary()
+	summary.Filter = aggregate.FilteredScopeSummary{Active: true, FilteredPhotos: 2}
+
+	model := buildModel(summary, "/archives/gallery", time.Date(2026, time.April, 5, 11, 31, 0, 0, time.UTC))
+	if !strings.Contains(model.Overview.ScopeNote, "excluded 2 phone-made photos") {
+		t.Fatalf("expected overview scope note, got %q", model.Overview.ScopeNote)
+	}
+	if !strings.Contains(model.Cameras.ScopeNote, "excluded 2 phone-made photos") {
+		t.Fatalf("expected section scope note, got %q", model.Cameras.ScopeNote)
+	}
+	if model.Cameras.EmptyMessage != "No non-phone photos remained for this section after filtering." {
+		t.Fatalf("unexpected filtered empty message: %q", model.Cameras.EmptyMessage)
+	}
+}
+
 func renderFixtureSummary() aggregate.Result {
 	first := time.Date(2020, time.January, 2, 10, 0, 0, 0, time.UTC)
 	last := time.Date(2021, time.May, 3, 12, 0, 0, 0, time.UTC)

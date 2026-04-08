@@ -54,6 +54,7 @@ type TUIModel struct {
 	discoverySnapshot Event
 	metadataProcessed int
 	metadataTotal     int
+	completionNote    string
 	warnings          []string
 }
 
@@ -129,6 +130,9 @@ func (m *TUIModel) applyEvent(event Event) {
 			m.metadataProcessed = event.ProcessedCount
 			m.metadataTotal = event.TotalCount
 		}
+		if event.Stage == "" && event.Message != "" && event.Message != "run started" && event.Message != "run complete" {
+			m.completionNote = event.Message
+		}
 	}
 }
 
@@ -159,6 +163,10 @@ func (m TUIModel) View() string {
 		for _, warning := range m.warnings {
 			lines = append(lines, "- "+warning)
 		}
+	}
+	if m.completionNote != "" {
+		lines = append(lines, "")
+		lines = append(lines, m.completionNote)
 	}
 
 	return strings.Join(lines, "\n") + "\n"

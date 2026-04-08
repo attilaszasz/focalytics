@@ -32,6 +32,20 @@ func TestNewRunCommandAcceptsValidArchiveRoot(t *testing.T) {
 	}
 }
 
+func TestNewRunCommandSetsIgnorePhonePhotosRequest(t *testing.T) {
+	archiveRoot := t.TempDir()
+	runner := &fakeRunner{result: app.RunResult{ExitCode: app.DefaultExitPolicy().Success}}
+	command := NewRunCommand(runner, app.DefaultExitPolicy(), IOStreams{Out: &bytes.Buffer{}, ErrOut: &bytes.Buffer{}})
+	command.SetArgs([]string{"--ignore-phone-photos", archiveRoot})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("expected valid archive root to execute cleanly: %v", err)
+	}
+	if !runner.request.IgnorePhonePhotos {
+		t.Fatal("expected ignore-phone-photos to propagate into the scan request")
+	}
+}
+
 func TestNewRunCommandRejectsInvalidArchiveRoot(t *testing.T) {
 	command := NewRunCommand(&fakeRunner{}, app.DefaultExitPolicy(), IOStreams{Out: &bytes.Buffer{}, ErrOut: &bytes.Buffer{}})
 	command.SetArgs([]string{"/path/that/does/not/exist"})

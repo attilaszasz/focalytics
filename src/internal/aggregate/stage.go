@@ -30,7 +30,7 @@ func (s Stage) Run(_ context.Context, runContext app.RunContext) (app.StageResul
 		return app.StageResult{StageName: s.Name(), Status: app.StageStatusFailure, Fatal: true, ErrorMessage: "metadata artifact type mismatch"}, fmt.Errorf("metadata artifact type mismatch")
 	}
 
-	result := s.service.Aggregate(metadataResult)
+	result := s.service.Aggregate(metadataResult, runContext.Request.IgnorePhonePhotos)
 	runContext.SetArtifact(app.ArtifactAggregateResult, result)
 
 	return app.StageResult{StageName: s.Name(), Status: app.StageStatusSuccess}, nil

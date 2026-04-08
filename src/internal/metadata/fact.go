@@ -27,6 +27,14 @@ const (
 	ProvenanceDerivedActualFocalLength ProvenanceSource = "derived_actual_focal_length"
 )
 
+type DeviceClass string
+
+const (
+	DeviceClassUnknown  DeviceClass = "unknown"
+	DeviceClassPhone    DeviceClass = "phone"
+	DeviceClassNonPhone DeviceClass = "non_phone"
+)
+
 type Exclusion struct {
 	Metric Metric
 	Reason string
@@ -44,6 +52,8 @@ type Fact struct {
 	ApertureF               *float64
 	ShutterSeconds          *float64
 	ISO                     *int
+	DeviceClass             DeviceClass
+	DeviceClassSource       ProvenanceSource
 	Provenance              map[Metric]ProvenanceSource
 	Exclusions              []Exclusion
 }

@@ -89,6 +89,7 @@ func buildModel(summary aggregate.Result, archiveRoot string, generatedAt time.T
 			TopCamera:   topLabels(summary.Gear.Cameras, 3),
 			TopLens:     topLabels(summary.Gear.Lenses, 3),
 			TopFocal:    topLabels(summary.Technical.FocalLengths, 3),
+			ScopeNote:   summary.Filter.OverviewNote(),
 		},
 		Timeline: TimelineSection{
 			YearBars:      barRows(summary.Timeline.Years),
@@ -97,17 +98,17 @@ func buildModel(summary aggregate.Result, archiveRoot string, generatedAt time.T
 			HeatmapHeight: 112,
 			Note:          sectionNote(summary.Exclusions, metadata.MetricCapturedAt),
 		},
-		Cameras:  metricSection("Camera bodies", "Most-used cameras in the archive", rankedRows(summary.Gear.Cameras), sectionNote(summary.Exclusions, metadata.MetricCameraModel)),
-		Lenses:   metricSection("Lenses", "Most-used lenses in the archive", rankedRows(summary.Gear.Lenses), sectionNote(summary.Exclusions, metadata.MetricLensModel)),
-		Focal:    metricSection("Focal length", "Normalized focal length usage", rankedRowsWithLensHints(summary.Technical.FocalLengths, summary.Technical.FocalLengthLenses), sectionNote(summary.Exclusions, metadata.MetricNormalizedFocalLength)),
-		Aperture: metricSection("Aperture", "How often apertures were used", rankedRowsWithLensHints(summary.Technical.Apertures, summary.Technical.ApertureLenses), sectionNote(summary.Exclusions, metadata.MetricApertureF)),
-		Shutter:  metricSection("Shutter speed", "Exposure duration distribution", rankedRows(summary.Technical.ShutterSpeeds), sectionNote(summary.Exclusions, metadata.MetricShutterSeconds)),
-		ISO:      metricSection("ISO", "Sensitivity distribution", rankedRows(summary.Technical.ISOs), sectionNote(summary.Exclusions, metadata.MetricISO)),
+		Cameras:  metricSection("Camera bodies", "Most-used cameras in the archive", rankedRows(summary.Gear.Cameras), sectionNote(summary.Exclusions, metadata.MetricCameraModel), summary.Filter),
+		Lenses:   metricSection("Lenses", "Most-used lenses in the archive", rankedRows(summary.Gear.Lenses), sectionNote(summary.Exclusions, metadata.MetricLensModel), summary.Filter),
+		Focal:    metricSection("Focal length", "Normalized focal length usage", rankedRowsWithLensHints(summary.Technical.FocalLengths, summary.Technical.FocalLengthLenses), sectionNote(summary.Exclusions, metadata.MetricNormalizedFocalLength), summary.Filter),
+		Aperture: metricSection("Aperture", "How often apertures were used", rankedRowsWithLensHints(summary.Technical.Apertures, summary.Technical.ApertureLenses), sectionNote(summary.Exclusions, metadata.MetricApertureF), summary.Filter),
+		Shutter:  metricSection("Shutter speed", "Exposure duration distribution", rankedRows(summary.Technical.ShutterSpeeds), sectionNote(summary.Exclusions, metadata.MetricShutterSeconds), summary.Filter),
+		ISO:      metricSection("ISO", "Sensitivity distribution", rankedRows(summary.Technical.ISOs), sectionNote(summary.Exclusions, metadata.MetricISO), summary.Filter),
 	}
 }
 
-func metricSection(title, subtitle string, rows []BarRow, note *SectionNote) MetricSection {
-	return MetricSection{Title: title, Subtitle: subtitle, Rows: rows, Note: note}
+func metricSection(title, subtitle string, rows []BarRow, note *SectionNote, filter aggregate.FilteredScopeSummary) MetricSection {
+	return MetricSection{Title: title, Subtitle: subtitle, Rows: rows, Note: note, ScopeNote: filter.SectionNote(), EmptyMessage: filter.EmptyMessage()}
 }
 
 func formatDateSpan(span aggregate.DateSpan) string {

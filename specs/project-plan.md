@@ -52,7 +52,7 @@ dod_source: ""
 
 > Add an opt-in device filter so photographers can exclude phone-made images without changing the default one-command workflow.
 
-- [ ] E008 [P2] [PRODUCT] {PRD:CAP-005,CAP-006}{SAD:ADR-003} Ignore Phone Photos — add an optional run parameter that excludes phone-made images from derived insights while reporting the filtered scope explicitly.
+- [X] E008 [P2] [PRODUCT] {PRD:CAP-005,CAP-006}{SAD:ADR-003} Ignore Phone Photos — add an optional run parameter that excludes phone-made images from derived insights while reporting the filtered scope explicitly.
 
 ## Dependency Diagram
 

@@ -10,6 +10,9 @@
   <main class="shell">
     <section class="hero">
       <div class="meta">Generated {{.Report.GeneratedAt}}</div>
+      {{if .Report.Overview.ScopeNote}}
+      <p class="scope-note">{{.Report.Overview.ScopeNote}}</p>
+      {{end}}
       <div class="cards">
         <article class="card">
           <div class="card-label">Total photos analyzed</div>
@@ -115,6 +118,9 @@
 </html>
 
 {{define "metric-section"}}
+  {{if .ScopeNote}}
+  <p class="scope-note">{{.ScopeNote}}</p>
+  {{end}}
   {{if .Rows}}
   <div class="bar-list">
     {{range .Rows}}
@@ -125,7 +131,7 @@
     {{end}}
   </div>
   {{else}}
-  <div class="empty">No aggregated data was available for this section.</div>
+  <div class="empty">{{.EmptyMessage}}</div>
   {{end}}
   {{if .Note}}
   <details class="note">

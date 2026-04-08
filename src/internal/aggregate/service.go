@@ -14,8 +14,11 @@ func NewService() Service {
 	return Service{}
 }
 
-func (s Service) Aggregate(metadataResult metadata.Result) Result {
+func (s Service) Aggregate(metadataResult metadata.Result, ignorePhonePhotos bool) Result {
 	result := Result{}
+	if ignorePhonePhotos {
+		result.Filter = FilteredScopeSummary{Active: true, AffectedSections: []string{"overview", "cameras", "lenses", "focal", "aperture", "shutter", "iso"}}
+	}
 	yearCounts := map[string]int{}
 	dayCounts := map[string]int{}
 	cameraCounts := map[string]int{}
@@ -42,28 +45,32 @@ func (s Service) Aggregate(metadataResult metadata.Result) Result {
 
 		cameraLabel := strings.TrimSpace(fact.CameraModel)
 		lensLabel := strings.TrimSpace(fact.LensModel)
+		eligibleForFilteredAnalytics := !ignorePhonePhotos || fact.DeviceClass != metadata.DeviceClassPhone
+		if ignorePhonePhotos && fact.DeviceClass == metadata.DeviceClassPhone {
+			result.Filter.FilteredPhotos++
+		}
 
-		if cameraLabel != "" {
+		if eligibleForFilteredAnalytics && cameraLabel != "" {
 			cameraCounts[cameraLabel]++
 		}
-		if lensLabel != "" {
+		if eligibleForFilteredAnalytics && lensLabel != "" {
 			lensCounts[lensLabel]++
 		}
-		if fact.NormalizedFocalLengthMM != nil {
+		if eligibleForFilteredAnalytics && fact.NormalizedFocalLengthMM != nil {
 			key, label := focalLengthBucket(*fact.NormalizedFocalLengthMM)
 			incrementBucket(focalBuckets, key, label)
 			incrementNestedCount(focalLensCounts, key, lensLabel)
 		}
-		if fact.ApertureF != nil {
+		if eligibleForFilteredAnalytics && fact.ApertureF != nil {
 			key, label := apertureBucket(*fact.ApertureF)
 			incrementBucket(apertureBuckets, key, label)
 			incrementNestedCount(apertureLensCounts, key, lensLabel)
 		}
-		if fact.ShutterSeconds != nil {
+		if eligibleForFilteredAnalytics && fact.ShutterSeconds != nil {
 			key, label := shutterSpeedBucket(*fact.ShutterSeconds)
 			incrementBucket(shutterBuckets, key, label)
 		}
-		if fact.ISO != nil {
+		if eligibleForFilteredAnalytics && fact.ISO != nil {
 			key, label := isoBucket(*fact.ISO)
 			incrementBucket(isoBuckets, key, label)
 		}

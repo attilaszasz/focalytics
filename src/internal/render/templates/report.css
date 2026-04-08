@@ -38,6 +38,7 @@ body {
 
 .meta,
 .bar-value,
+.scope-note,
 .note,
 .empty,
 .footer {
@@ -54,6 +55,12 @@ body {
 .cards {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin-top: 12px;
+}
+
+.scope-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .card,
