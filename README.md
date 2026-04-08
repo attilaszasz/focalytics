@@ -131,7 +131,7 @@ On macOS, use `shasum -a 256` instead of `sha256sum`.
 
 ## Build From Source
 
-If you prefer to compile the tool yourself, install Go `1.25.8` or newer compatible with the module and build from the `src` directory:
+If you prefer to compile the tool yourself, install Go `1.25.9` or newer compatible with the module and build from the `src` directory:
 
 ```bash
 cd src
